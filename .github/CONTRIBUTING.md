@@ -1,6 +1,6 @@
 # Contributing
 ## Requirements
-To work on this project, you need to have installed [Flutter](https://docs.flutter.dev/get-started/install?_gl=1*h6bu5u*_ga*MTg5MDAyODE1OS4xNzUzMTgwMzIy*_ga_04YGWK0175*czE3NTMzNTExMjYkbzIkZzAkdDE3NTMzNTExMjYkajYwJGwwJGgw), [Rust](https://www.rust-lang.org/learn/get-started), and Tauri using `cargo install tauri-cli`. You may need to install tauri dependencies depending on your platform, there's info about this [here](https://v1.tauri.app/v1/guides/getting-started/prerequisites).
+To work on this project, you need to have installed [Flutter](https://docs.flutter.dev/get-started/install?_gl=1*h6bu5u*_ga*MTg5MDAyODE1OS4xNzUzMTgwMzIy*_ga_04YGWK0175*czE3NTMzNTExMjYkbzIkZzAkdDE3NTMzNTExMjYkajYwJGwwJGgw), [Rust](https://www.rust-lang.org/learn/get-started), and [Tauri](https://v2.tauri.app/) using `cargo install tauri-cli`. You may need to install tauri dependencies depending on your platform, there's info about this [here](https://v1.tauri.app/v1/guides/getting-started/prerequisites).
 
 ## Building
 ### Flutter
