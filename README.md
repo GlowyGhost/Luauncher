@@ -4,7 +4,7 @@ Another Game Launcher I guess...
 
 ## Overview
 
-A game launcher using Flutter: frontend, Rust: backend, Lua: scripts, Tauri: Renderer. For anyone wanting to contribute, I'm probably not going to be merging branches if its so far in the future since... yeah, I'll probably forget about this project in like, a month. But still feel free to contribute things to this repo.
+A game launcher using Flutter: frontend, Rust: backend, Lua: scripts, Tauri: Renderer. For anyone wanting to contribute, Feel free! There's mmore info about contribution [here](https://github.com/GlowyGhost/Launcher/blob/main/Contributing.md).
 
 
 ### Windows Installation
