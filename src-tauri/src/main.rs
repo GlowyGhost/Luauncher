@@ -26,6 +26,11 @@ fn get_games() -> Vec<String> {
     vec!["Hello".into(), "World".into(), "!".into()]
 }
 
+#[tauri::command]
+fn run_game(game_name: String) {
+    println!("{}", game_name);
+}
+
 /*
         So this is a function that was writen to get the games ico file to render in flutter.
         This does work and gets an error so,
@@ -131,7 +136,24 @@ fn get_icon(_game_name: String) -> String {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_games,  /*get_icon*/])
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("launcher") {
+                window.hide().unwrap();
+
+                let args: Vec<String> = std::env::args().collect();
+
+                if args[1] != "" {
+                    window.show().unwrap();
+                } else {
+                    run_game(args[1].clone());
+                }
+            } else {
+                println!("No window labeled 'launcher' found.");
+            }
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![get_games, run_game, /*get_icon*/])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
