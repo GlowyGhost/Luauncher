@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:js' as js;
+
+import '../tauri_invoke.dart';
 
 class LibraryScreen extends StatefulWidget {
 	const LibraryScreen({super.key});
@@ -12,15 +15,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
 	bool _loading = true;
 	String? _selectedGame;
 
+	bool get isTauriAvailable {
+		final tauri = js.context['__TAURI__'];
+		return tauri != null && tauri is js.JsObject;
+	}
+
 	@override
-	void initState() {
+	Future<void> initState() async {
 		super.initState();
-		_loadGames();
+		_init();
+	}
+
+	
+	Future<void> _init() async {
+		await _loadGames();
+
+		if (mounted) {
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('$isTauriAvailable')),
+			);
+		}
 	}
 
 	Future<void> _loadGames() async {
 		setState(() => _loading = true);
-		final games = ["Portal", "Portal 2", "Half-Life", "Crab Game"]; // Temporary, TODO: Get all TRUE files through rust (probobly, planned to do that currently)
+		final games = await tauriInvoke('get_games');
 		setState(() {
 			_games = games;
 			_loading = false;
@@ -77,7 +96,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
 										return ListTile(
 											title: Text(_games[index]),
+
 											leading: const Icon(Icons.videogame_asset),
+
+											/*
+													Doesn't work. Check main.rs to see what I said about this        -- GlowyGhost 25/7/25
+											 leading: FutureBuilder<Image>(
+												future: tauriInvoke("get_icon", {"game_name": _games[index]})
+													.then((base64String) => base64ToImage(base64String)),
+												builder: (context, snapshot) {
+													if (snapshot.connectionState == ConnectionState.waiting) {
+														return const SizedBox(
+															width: 24,
+															height: 24,
+															child: CircularProgressIndicator(strokeWidth: 2),
+														);
+													} else if (snapshot.hasError) {
+														ScaffoldMessenger.of(context).showSnackBar(
+															SnackBar(content: Text('${snapshot.data} for ${_games[index]}')),
+														);
+
+														return const Icon(Icons.error);
+													} else if (snapshot.hasData) {
+														return SizedBox(
+															width: 32,
+															height: 32,
+															child: snapshot.data!,
+														);
+													} else {
+														return const Icon(Icons.image_not_supported);
+													}
+												},
+											), */
+
 											tileColor: isSelected ? Colors.grey[800] : null,
 											onTap: () => _launchGame(_games[index]),
 										);
