@@ -30,9 +30,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 	Future<void> _init() async {
 		await _loadGames();
 
-		if (mounted) {
+		if (mounted && isTauriAvailable == false) {
 			ScaffoldMessenger.of(context).showSnackBar(
-				SnackBar(content: Text('$isTauriAvailable')),
+				SnackBar(content: Text('Unable to connect with backend.')),
 			);
 		}
 	}
@@ -46,7 +46,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 		});
 	}
 
-	void _launchGame(game) {
+	Future<void> _launchGame(game) async {
+    await tauriInvoke("run_game");
+
 		ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text('Launching $game')),
 		);
