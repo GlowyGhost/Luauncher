@@ -25,3 +25,4 @@ serde_json = "1"
 base64 = "0.21"
 winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wingdi", "minwindef", "windef"] }
 image = "0.23" 
+mlua = { version = "0.10", features = ["lua54", "vendored", "async", "send"] }
