@@ -1,7 +1,8 @@
 use mlua::{Lua, Value};
 use std::process::Command;
+use std::path::PathBuf;
 
-use crate::files;
+use crate::files::{self, get_scripts_dir};
 
 fn get_custom_lua() -> Lua {
     let lua = Lua::new();
@@ -42,16 +43,16 @@ fn open_app(_lua: &Lua, arg: String) -> mlua::Result<()> {
 pub(crate) fn lua_run_game(script_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let lua = get_custom_lua();
 
-    let mut path: String = "______/".to_owned();
+    let mut path: PathBuf = get_scripts_dir().expect("Scripts dir not found");
 
-    if script_name.contains(".") {
-        path = path + script_name;
+    if script_name.ends_with(".lua") {
+        path.push(script_name);
     } else {
-        path = path + script_name + ".lua";
+        path.push(format!("{}.lua", script_name));
     }
 
     let chunk = lua.load(
-        files::get_file_content(path)
+        files::get_file_content(path.to_string_lossy().to_string())
     );
 
     let res = chunk.eval::<Value>()?;
