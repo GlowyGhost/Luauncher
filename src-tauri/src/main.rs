@@ -1,8 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
-
 /*
 use std::ptr::null_mut;
 use std::io::Cursor;
@@ -17,18 +15,24 @@ use image::{png::PngEncoder, ColorType};
 use base64::{engine::general_purpose, Engine as _};
  */
 
+use tauri::Manager;
+
+
 mod utils;
+mod lua_utils;
+mod files;
 
 
 
 #[tauri::command]
 fn get_games() -> Vec<String> {
-    vec!["Hello".into(), "World".into(), "!".into()]
+    files::get_files_in_dir("______")
+        .unwrap_or_else(|_| Vec::new())
 }
 
 #[tauri::command]
 fn run_game(game_name: String) {
-    println!("{}", game_name);
+    let _ = lua_utils::lua_run_game(&game_name);
 }
 
 /*
@@ -142,10 +146,11 @@ fn main() {
 
                 let args: Vec<String> = std::env::args().collect();
 
-                if args[1] != "" {
-                    window.show().unwrap();
-                } else {
+                if args.len() > 1 && !args[1].is_empty() {
                     run_game(args[1].clone());
+                    std::process::exit(0);
+                } else {
+                    window.show().unwrap();
                 }
             } else {
                 println!("No window labeled 'launcher' found.");
@@ -153,7 +158,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_games, run_game, /*get_icon*/])
+        .invoke_handler(tauri::generate_handler![get_games, run_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
