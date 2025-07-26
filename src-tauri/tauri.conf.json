@@ -10,6 +10,7 @@
 		"withGlobalTauri": true,
 		"windows": [
 			{
+				"label": "launcher",
 				"title": "launcher",
 				"width": 800,
 				"height": 600
