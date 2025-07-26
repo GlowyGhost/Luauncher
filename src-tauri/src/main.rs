@@ -26,7 +26,7 @@ mod files;
 
 #[tauri::command]
 fn get_games() -> Vec<String> {
-    files::get_files_in_dir("______")
+    files::list_scripts()
         .unwrap_or_else(|_| Vec::new())
 }
 
@@ -144,12 +144,22 @@ fn main() {
             if let Some(window) = app.get_webview_window("launcher") {
                 window.hide().unwrap();
 
-                let args: Vec<String> = std::env::args().collect();
+                let mut args: Vec<String> = std::env::args().collect();
 
                 if args.len() > 1 && !args[1].is_empty() {
-                    run_game(args[1].clone());
+                    args.remove(0);
+
+                    let mut main_arg: String = "".to_owned();
+
+                    for arg in args {
+                        main_arg = main_arg + &arg + " ";
+                    }
+
+                    main_arg.pop();
+                    run_game(main_arg);
                     std::process::exit(0);
                 } else {
+                    files::make_dirs();
                     window.show().unwrap();
                 }
             } else {
