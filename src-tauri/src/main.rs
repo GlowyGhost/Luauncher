@@ -22,8 +22,6 @@ mod utils;
 mod lua_utils;
 mod files;
 
-
-
 #[tauri::command]
 fn get_games() -> Vec<String> {
     files::list_scripts()
@@ -31,8 +29,14 @@ fn get_games() -> Vec<String> {
 }
 
 #[tauri::command]
-fn run_game(game_name: String) {
-    let _ = lua_utils::lua_run_game(&game_name);
+async fn run_game(gameName: String) -> Result<String, String> {
+    println!("[run_game] Got gameName = {}", gameName);
+
+    let _ = lua_utils::lua_run_game(&gameName)
+        .await
+        .map_err(|e| format!("Lua run error: {}", e));
+
+    Ok("Game executed Succsessfully.".to_string())
 }
 
 /*
@@ -138,7 +142,8 @@ fn get_icon(_game_name: String) -> String {
     }
 } */
 
-fn main() {
+#[tokio::main]
+async fn main() {
     tauri::Builder::default()
         .setup(|app| {
             if let Some(window) = app.get_webview_window("launcher") {
@@ -149,15 +154,16 @@ fn main() {
                 if args.len() > 1 && !args[1].is_empty() {
                     args.remove(0);
 
-                    let mut main_arg: String = "".to_owned();
+                    let main_arg = args.join(" ");
 
-                    for arg in args {
-                        main_arg = main_arg + &arg + " ";
-                    }
-
-                    main_arg.pop();
-                    run_game(main_arg);
-                    std::process::exit(0);
+                    // This blocks the current thread until async task finishes
+                    tokio::task::block_in_place(move || {
+                        let rt = tokio::runtime::Handle::current();
+                        rt.block_on(async move {
+                            let _ = run_game(main_arg).await;
+                            std::process::exit(0);
+                        });
+                    });
                 } else {
                     files::make_dirs();
                     window.show().unwrap();
@@ -166,8 +172,7 @@ fn main() {
                 println!("No window labeled 'launcher' found.");
             }
 
-            Ok(())
-        })
+            Ok(())})
         .invoke_handler(tauri::generate_handler![get_games, run_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
