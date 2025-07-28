@@ -46,8 +46,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
 		});
 	}
 
-	Future<void> _launchGame(game) async {
-    await tauriInvoke("run_game");
+	Future<void> _launchGame(String game) async {
+    await tauriInvoke("run_game", {"gameName": game});
 
 		ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text('Launching $game')),
@@ -97,7 +97,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 										final isSelected = _selectedGame == game;
 
 										return ListTile(
-											title: Text(_games[index]),
+											title: Text(game),
 
 											leading: const Icon(Icons.videogame_asset),
 
@@ -132,7 +132,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 											), */
 
 											tileColor: isSelected ? Colors.grey[800] : null,
-											onTap: () => _launchGame(_games[index]),
+											onTap: () => _launchGame(game),
 										);
 									},
 								),
