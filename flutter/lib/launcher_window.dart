@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'screens/library_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/output_screen.dart';
 
-enum LauncherPage { library, settings }
+enum LauncherPage { library, settings, output }
 
 class LauncherWindow extends StatefulWidget {
 	const LauncherWindow({super.key});
@@ -22,7 +23,6 @@ class _LauncherWindowState extends State<LauncherWindow> {
 			backgroundColor: const Color(0xFF262626),
 			body: Row(
 				children: [
-					// Left panel with 5px offset and rounded corners
 					Padding(
 						padding: const EdgeInsets.only(top: 5, bottom: 5, left: 5),
 						child: Container(
@@ -34,21 +34,22 @@ class _LauncherWindowState extends State<LauncherWindow> {
 							child: Column(
 								crossAxisAlignment: CrossAxisAlignment.stretch,
 								children: [
-								const SizedBox(height: 40),
-								_buildNavButton('Library', LauncherPage.library),
-								_buildNavButton('Settings', LauncherPage.settings),
+								const SizedBox(height: 60),
+									_buildNavButton('Library', LauncherPage.library),
+									_buildNavButton('Settings', LauncherPage.settings),
+									_buildNavButton('Output', LauncherPage.output),
 								],
 							),
 						),
 					),
 
-					// Content Area (fills rest)
 					Expanded(
 						child: Container(
 							color: const Color(0xFF262626),
 							child: switch (_currentPage) {
 								LauncherPage.library => const LibraryScreen(),
 								LauncherPage.settings => const SettingsScreen(),
+								LauncherPage.output => const OutputScreen(),
 							},
 						),
 					),
