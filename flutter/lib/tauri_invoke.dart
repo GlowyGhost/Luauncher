@@ -5,21 +5,34 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import 'output_logger.dart';
+
 @JS('window.__TAURI__.core.invoke')
 external dynamic _invoke(String cmd, [dynamic args]);
 
 Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
-	final promise = _invoke(cmd, args);
-	final result = await promiseToFuture(promise);
-		
-	// Convert from JS array to Dart list if needed
-	if (result is List) {
-		return List<String>.from(result.map((e) => e.toString()));
-	} else if (result is String) {
-		return result;
-	}
+  logger.add("[Tauri Invoke] Invoking command $cmd");
+  logger.add("[Tauri Invoke Args] cmd=$cmd args=${jsonEncode(args)}");
 
-	throw Exception('Unexpected result from Tauri: $result');
+  try {
+    final jsArgs = args != null ? jsify(args) : null;
+    final promise = _invoke(cmd, jsArgs);
+    final result = await promiseToFuture(promise);
+
+    if (result is List) {
+      return List<String>.from(result.map((e) => e.toString()));
+    } else if (result is String) {
+      return result;
+    } else if (result == null) {
+      return null;
+    }
+
+    return result;
+  } catch (e, st) {
+    logger.add("[Tauri Invoke Error] $e");
+    logger.add("[STACKTRACE] $st");
+    rethrow;
+  }
 }
 
 Future<Image> base64ToImage(String base64String) async {
