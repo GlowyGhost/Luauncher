@@ -33,6 +33,10 @@ class _AppState extends State<App> {
     setState(() {
       _isLoaded = true;
     });
+
+    if (settings.isDevMode) {
+      logger.add("[main.dart] Successfully opened");
+    }
   }
 
   @override
