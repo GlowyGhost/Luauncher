@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../tauri_invoke.dart';
+import 'output_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
 	const SettingsScreen({super.key});
@@ -27,6 +28,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 			ScaffoldMessenger.of(context).showSnackBar(
 				SnackBar(content: Text('Saved Settings Successfully!')),
 			);
+
+            if (settings.isDevMode) {
+                logger.add("[settings.dart] Saved Setings");
+            }
 		}
 	}
 
@@ -143,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class Settings extends ChangeNotifier {
-  bool oldDarkMode = true;
+    bool oldDarkMode = true;
 	bool isDarkMode = true;
 	bool isDevMode = false;
 	bool closeAfterOpen = true;
@@ -154,17 +159,21 @@ class Settings extends ChangeNotifier {
 		isDarkMode = settings["dark"];
 		isDevMode = settings["dev"];
 		closeAfterOpen = settings["close"];
-    oldDarkMode = settings["dark"];
+        oldDarkMode = settings["dark"];
 	}
 
 	Future<String> saveSettings() async {
 		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen});
 
-    if (oldDarkMode != isDarkMode) {
-      await tauriInvoke('restart_app');
-    }
+        if (oldDarkMode != isDarkMode) {
+            if (settings.isDevMode) {
+                logger.add("[settings.dart] Restarting app");
+            }
 
-    return res;
+            await tauriInvoke('restart_app');
+        }
+
+        return res;
 	}
 }
 
