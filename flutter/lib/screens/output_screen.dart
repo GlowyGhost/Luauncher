@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../output_logger.dart';
+
+import 'settings_screen.dart';
 
 class OutputScreen extends StatefulWidget {
   const OutputScreen({super.key});
@@ -20,10 +21,7 @@ class _OutputScreenState extends State<OutputScreen> {
 						itemCount: logger.logs.length,
 						itemBuilder: (context, index) {
 							final log = logger.logs[index];
-							return Text(
-								log,
-								style: const TextStyle(fontSize: 14, color: Colors.white),
-							);
+							return Text(log, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black));
 						},
 					);
 				},
@@ -31,3 +29,22 @@ class _OutputScreenState extends State<OutputScreen> {
 		);
   }
 }
+
+class Logger extends ChangeNotifier {
+    final List<String> _logs = [];
+    final bool devMode = false;
+
+    List<String> get logs => List.unmodifiable(_logs);
+
+    void add(String message) {
+        _logs.add(message);
+        notifyListeners();
+    }
+
+    void clear() {
+        _logs.clear();
+        notifyListeners();
+    }
+}
+
+final logger = Logger();
