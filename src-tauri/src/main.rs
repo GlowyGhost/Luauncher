@@ -15,8 +15,6 @@ use image::{png::PngEncoder, ColorType};
 use base64::{engine::general_purpose, Engine as _};
  */
 
-use std::{thread, time};
-
 use tauri::Manager;
 
 
@@ -61,6 +59,16 @@ fn restart_app() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     std::process::exit(0);
+}
+
+#[tauri::command]
+fn hide_app(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("launcher") {
+        window.hide().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Window 'launcher' not found".to_owned())
+    }
 }
 
 #[tauri::command]
@@ -202,7 +210,7 @@ async fn main() {
             }
 
             Ok(())})
-        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app])
+        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
