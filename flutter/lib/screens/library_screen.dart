@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:js' as js;
 
 import '../tauri_invoke.dart';
+import 'output_screen.dart';
 import 'settings_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -45,14 +46,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
 			_games = games;
 			_loading = false;
 		});
+
+    if (settings.isDevMode) {
+      logger.add("[library.dart] Got games $games");
+    }
 	}
 
 	Future<void> _launchGame(String game) async {
-    await tauriInvoke("run_game", {"gameName": game});
+    if (settings.isDevMode) {
+      logger.add("[library.dart] Opening game $game");
+    }
 
-		ScaffoldMessenger.of(context).showSnackBar(
+    if (settings.closeAfterOpen) {
+      await tauriInvoke("hide_app");
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text('Launching $game')),
 		);
+
+    await tauriInvoke("run_game", {"gameName": game});
 	}
 
 	void _onAddGame() {
