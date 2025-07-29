@@ -20,6 +20,7 @@ fn get_custom_lua() -> Lua {
     let _ = globals.set("isAppOpen", lua.create_function(is_app_open).unwrap());
     let _ = globals.set("isWindowOpen", lua.create_function(is_window_open).unwrap());
     let _ = globals.set("openURL", lua.create_function(open_url).unwrap());
+    let _ = globals.set("closeLauncherWindow", lua.create_function(close_launcher_window).unwrap());
 
     let _ = globals.set("waitUntilWindowClose", lua.create_async_function(|_lua, window_name: String| async move {
         wait_until_window_closed_async(window_name).await
@@ -322,6 +323,26 @@ async fn wait_window_opened_async(title: String, timeout_ms: u64) -> LuaResult<b
         waited += interval;
     }
     Ok(false)
+}
+fn close_launcher_window(_lua: &Lua, arg: Option<u64>) -> mlua::Result<()> {
+    let err_code = arg.unwrap_or(0)
+                            .try_into().unwrap_or(1);
+
+    match files::load_settings() {
+        Ok(Some(settings)) => {
+            if settings.close {
+                std::process::exit(err_code);
+            }
+        }
+        Ok(None) => {
+            println!("Settings not found.");
+        }
+        Err(e) => {
+            return Err(LuaError::external(format!("Failed to load settings: {}", e)));
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) async fn lua_run_game(script_name: &str) -> Result<(), Box<dyn std::error::Error>> {
