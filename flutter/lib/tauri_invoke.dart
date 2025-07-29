@@ -5,15 +5,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
-import 'output_logger.dart';
+import 'screens/output_screen.dart';
 
 @JS('window.__TAURI__.core.invoke')
 external dynamic _invoke(String cmd, [dynamic args]);
 
 Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
   logger.add("[Tauri Invoke] Invoking command $cmd");
-  logger.add("[Tauri Invoke Args] cmd=$cmd args=${jsonEncode(args)}");
-
+  
   try {
     final jsArgs = args != null ? jsify(args) : null;
     final promise = _invoke(cmd, jsArgs);
@@ -25,12 +24,17 @@ Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
       return result;
     } else if (result == null) {
       return null;
+    } else if (result is! String && hasProperty(result, 'dark')) {
+      return {
+        'dark': getProperty(result, 'dark'),
+        'dev': getProperty(result, 'dev'),
+        'close': getProperty(result, 'close'),
+      };
     }
 
     return result;
-  } catch (e, st) {
+  } catch (e) {
     logger.add("[Tauri Invoke Error] $e");
-    logger.add("[STACKTRACE] $st");
     rethrow;
   }
 }
