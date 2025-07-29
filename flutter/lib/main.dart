@@ -1,25 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:launcher/screens/output_screen.dart';
 import 'launcher_window.dart';
+import 'screens/settings_screen.dart';
 
-void main() {
-  	runApp(const MyApp());
+void main() async {
+  runApp(const App());
 }
 
-class MyApp extends StatelessWidget {
-	const MyApp({super.key});
+class App extends StatefulWidget {
+  const App({super.key});
 
-	@override
-	Widget build(BuildContext context) {
-		return MaterialApp(
-			title: 'Game Launcher',
-			debugShowCheckedModeBanner: false,
-			theme: ThemeData(
-				scaffoldBackgroundColor: const Color(0xFF262626),
-				brightness: Brightness.dark,
-				primaryColor: Color(0xFF262626),
-				fontFamily: 'Segoe UI',
-			),
-			home: const LauncherWindow(),
-		);
-	}
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  bool _isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      await settings.loadSettings();
+    } catch (e) {
+      logger.add("Error loading settings: $e");
+    }
+
+    setState(() {
+      _isLoaded = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isLoaded) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    return MaterialApp(
+        title: 'Game Launcher',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+            scaffoldBackgroundColor: settings.oldDarkMode
+                ? const Color(0xFF262626)
+                : const Color(0xFFCCCCCC),
+            primaryColor: settings.oldDarkMode
+                ? const Color(0xFF262626)
+                : const Color(0xFFCCCCCC),
+        ),
+        home: const LauncherWindow(),
+    );
+  }
 }
