@@ -15,6 +15,8 @@ use image::{png::PngEncoder, ColorType};
 use base64::{engine::general_purpose, Engine as _};
  */
 
+use std::{thread, time};
+
 use tauri::Manager;
 
 
@@ -30,13 +32,40 @@ fn get_games() -> Vec<String> {
 
 #[tauri::command]
 async fn run_game(gameName: String) -> Result<String, String> {
-    println!("[run_game] Got gameName = {}", gameName);
-
     let _ = lua_utils::lua_run_game(&gameName)
         .await
         .map_err(|e| format!("Lua run error: {}", e));
 
     Ok("Game executed Succsessfully.".to_string())
+}
+
+#[tauri::command]
+fn save_settings(dark: bool, dev: bool, close: bool) -> String {
+    let _ = files::save_settings(&files::Settings{
+        dark,
+        dev,
+        close
+    });
+
+    "Saved Settings".to_string()
+}
+
+#[tauri::command]
+fn restart_app() -> Result<(), String> {
+    use std::process::Command;
+
+    let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
+
+    Command::new(current_exe)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    std::process::exit(0);
+}
+
+#[tauri::command]
+fn get_settings() -> Result<Option<files::Settings>, String> {
+    files::load_settings().map_err(|e| e.to_string())
 }
 
 /*
@@ -173,7 +202,7 @@ async fn main() {
             }
 
             Ok(())})
-        .invoke_handler(tauri::generate_handler![get_games, run_game])
+        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
