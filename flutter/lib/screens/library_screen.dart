@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:js' as js;
 
 import '../tauri_invoke.dart';
+import 'settings_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
 	const LibraryScreen({super.key});
@@ -71,13 +72,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
 							ElevatedButton.icon(
 								onPressed: _onAddGame,
 								icon: const Icon(Icons.add),
-								label: const Text("Add"),
+								label: Text("Add"),
 							),
 							const SizedBox(width: 10),
 							ElevatedButton.icon(
 								onPressed: _loadGames,
 								icon: const Icon(Icons.refresh),
-								label: const Text("Refresh"),
+								label: Text("Refresh"),
 							),
 						],
 					),
@@ -87,7 +88,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 					child: _loading
 						? const Center(child: CircularProgressIndicator())
 						: _games.isEmpty
-							? const Center(child: Text("No games found."))
+							? Center(child: Text("No games found.", style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)))
 							: Material(
 								color: Colors.transparent,
 								child: ListView.builder(
@@ -97,7 +98,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 										final isSelected = _selectedGame == game;
 
 										return ListTile(
-											title: Text(game),
+											title: Text(game, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
 
 											leading: const Icon(Icons.videogame_asset),
 
