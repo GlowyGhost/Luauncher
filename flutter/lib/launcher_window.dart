@@ -20,7 +20,9 @@ class _LauncherWindowState extends State<LauncherWindow> {
 		final screenWidth = MediaQuery.of(context).size.width;
 
 		return Scaffold(
-			backgroundColor: const Color(0xFF262626),
+			backgroundColor: settings.oldDarkMode
+                  ? Color(0xFF262626)
+                  : Color(0xCCCCCCCC),
 			body: Row(
 				children: [
 					Padding(
@@ -28,7 +30,9 @@ class _LauncherWindowState extends State<LauncherWindow> {
 						child: Container(
 							width: screenWidth / 3,
 							decoration: BoxDecoration(
-								color: const Color(0xFF1F1F1F),
+								color: settings.oldDarkMode
+                  ? Color(0xFF1F1F1F)
+                  : Color(0xFFA1A1A1),
 								borderRadius: BorderRadius.circular(12),
 							),
 							child: Column(
@@ -45,7 +49,9 @@ class _LauncherWindowState extends State<LauncherWindow> {
 
 					Expanded(
 						child: Container(
-							color: const Color(0xFF262626),
+							color: settings.oldDarkMode
+                  ? Color(0xFF262626)
+                  : Color(0xFFCCCCCC),
 							child: switch (_currentPage) {
 								LauncherPage.library => const LibraryScreen(),
 								LauncherPage.settings => const SettingsScreen(),
@@ -62,12 +68,18 @@ class _LauncherWindowState extends State<LauncherWindow> {
 		final isSelected = _currentPage == page;
 		return TextButton(
 			style: TextButton.styleFrom(
-				foregroundColor: isSelected ? Colors.white : Colors.grey,
+				foregroundColor: isSelected ? 
+          settings.oldDarkMode
+            ? Color(0xFFFFFFFF)
+            : Color(0xFF545454)
+          : settings.oldDarkMode
+            ? Color(0xFFB3B3B3)
+            : Colors.black,
 				padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
 				alignment: Alignment.centerLeft,
 			),
 			onPressed: () => setState(() => _currentPage = page),
-			child: Text(label, style: const TextStyle(fontSize: 18)),
+			child: Text(label),
 		);
 	}
 }
