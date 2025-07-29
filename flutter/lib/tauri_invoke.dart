@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:launcher/screens/settings_screen.dart';
 
 import 'screens/output_screen.dart';
 
@@ -11,7 +12,9 @@ import 'screens/output_screen.dart';
 external dynamic _invoke(String cmd, [dynamic args]);
 
 Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
-  logger.add("[Tauri Invoke] Invoking command $cmd");
+  if (settings.isDevMode) {
+    logger.add("[tauri_invoke.dart] Invoking command $cmd");
+  }
   
   try {
     final jsArgs = args != null ? jsify(args) : null;
