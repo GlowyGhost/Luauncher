@@ -1,5 +1,6 @@
 use directories::BaseDirs;
-use std::fs;
+use std::collections::HashMap;
+use std::{fs};
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 
@@ -23,7 +24,9 @@ pub(crate) fn get_file_content(path: String) -> String {
 pub(crate) struct Settings {
     pub(crate) dark: bool,
     pub(crate) dev: bool,
-    pub(crate) close: bool
+    pub(crate) close: bool,
+    #[serde(default)]
+    pub(crate) games: HashMap<String, String>,
 }
 
 pub(crate) fn save_settings(settings: &Settings) -> std::io::Result<()> {
@@ -101,7 +104,8 @@ pub(crate) fn make_dirs() {
         let default_settings = r#"{
             "dark": true,
             "dev": false,
-            "close": true
+            "close": true,
+            "games": {}
         }"#;
 
         if let Err(e) = fs::write(&settings_path, default_settings) {
@@ -109,7 +113,5 @@ pub(crate) fn make_dirs() {
         } else {
             println!("Wrote default settings to {:?}", settings_path);
         }
-    } else {
-        println!("Settings file already exists at {:?}", settings_path);
     }
 }
