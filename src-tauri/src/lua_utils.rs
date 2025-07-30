@@ -95,7 +95,7 @@ fn close_app(_lua: &Lua, process_name: String) -> mlua::Result<()> {
 
     Ok(())
 }
-fn is_app_open(_lua: &Lua, process_name: String) /* Maybe Issue */ -> mlua::Result<bool> {
+fn is_app_open(_lua: &Lua, process_name: String) -> mlua::Result<bool> {
     #[cfg(target_os = "windows")]
     {
         let escaped = process_name.replace("&", "^&");
@@ -186,7 +186,7 @@ fn open_url(_lua: &Lua, url: String) -> mlua::Result<bool> {
 
     Ok(true)
 }
-fn check_window_open(window_title: &str) /* Maybe Issue */ -> std::io::Result<bool> {
+fn check_window_open(window_title: &str) -> std::io::Result<bool> {
     #[cfg(target_os = "windows")]
     {
         let c_title = CString::new(window_title).unwrap();
@@ -284,7 +284,7 @@ fn is_window_open_util(title: &str) -> std::io::Result<bool> {
         Ok(!String::from_utf8_lossy(&out.stdout).trim().is_empty())
     }
 }
-fn is_process_running(name: &str) /* Maybe Issue */ -> std::io::Result<bool> {
+fn is_process_running(name: &str) -> std::io::Result<bool> {
     #[cfg(target_os = "windows")] {
         let escaped = name.replace("&", "^&");
 
