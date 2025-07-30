@@ -5,6 +5,13 @@ import '../tauri_invoke.dart';
 import 'output_screen.dart';
 import 'settings_screen.dart';
 
+class GameInfo {
+	final String name;
+	final Image? icon;
+
+	GameInfo(this.name, this.icon);
+}
+
 class LibraryScreen extends StatefulWidget {
 	const LibraryScreen({super.key});
 
@@ -13,7 +20,7 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-	List<String> _games = [];
+	List<GameInfo> _games = [];
 	bool _loading = true;
 	String? _selectedGame;
 
@@ -41,15 +48,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
 	Future<void> _loadGames() async {
 		setState(() => _loading = true);
-		final games = await tauriInvoke('get_games');
+    final gameNames = await tauriInvoke('get_games') as List<String>;
+
+    List<GameInfo> loadedGames = [];
+
+    for (final name in gameNames) {
+      try {
+        final exePath = await tauriInvoke("get_game_path", {"gameName": name});
+        final base64Icon = await tauriInvoke("get_icon", {"exePath": exePath});
+
+        if (base64Icon == "" || base64Icon == null || base64Icon.isEmpty) {
+          loadedGames.add(GameInfo(name, null));
+        } else {
+          final icon = await base64ToImage(base64Icon);
+
+          loadedGames.add(GameInfo(name, icon));
+        }
+      } catch (e) {
+        loadedGames.add(GameInfo(name, null));
+
+        if (settings.isDevMode) {
+          logger.add("Error loading icon for $name: $e");
+        }
+      }
+    }
+
 		setState(() {
-			_games = games;
+			_games = loadedGames;
 			_loading = false;
 		});
-
-    if (settings.isDevMode) {
-      logger.add("[library.dart] Got games $games");
-    }
 	}
 
 	Future<void> _launchGame(String game) async {
@@ -111,42 +138,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 										final isSelected = _selectedGame == game;
 
 										return ListTile(
-											title: Text(game, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
-
-											leading: const Icon(Icons.videogame_asset),
-
-											/*
-													Doesn't work. Check main.rs to see what I said about this        -- GlowyGhost 25/7/25
-											 leading: FutureBuilder<Image>(
-												future: tauriInvoke("get_icon", {"game_name": _games[index]})
-													.then((base64String) => base64ToImage(base64String)),
-												builder: (context, snapshot) {
-													if (snapshot.connectionState == ConnectionState.waiting) {
-														return const SizedBox(
-															width: 24,
-															height: 24,
-															child: CircularProgressIndicator(strokeWidth: 2),
-														);
-													} else if (snapshot.hasError) {
-														ScaffoldMessenger.of(context).showSnackBar(
-															SnackBar(content: Text('${snapshot.data} for ${_games[index]}')),
-														);
-
-														return const Icon(Icons.error);
-													} else if (snapshot.hasData) {
-														return SizedBox(
-															width: 32,
-															height: 32,
-															child: snapshot.data!,
-														);
-													} else {
-														return const Icon(Icons.image_not_supported);
-													}
-												},
-											), */
-
+											title: Text(game.name, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
+											leading: game.icon ?? const Icon(Icons.videogame_asset),
 											tileColor: isSelected ? Colors.grey[800] : null,
-											onTap: () => _launchGame(game),
+											onTap: () => _launchGame(game.name),
 										);
 									},
 								),
