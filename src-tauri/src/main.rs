@@ -1,24 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-/*
-use std::ptr::null_mut;
-use std::io::Cursor;
+use std::collections::HashMap;
 
-use winapi::um::wingdi::*;
-use winapi::um::winuser::*;
-use winapi::um::winnt::*;
-use winapi::shared::windef::*;
-use winapi::shared::minwindef::*;
-
-use image::{png::PngEncoder, ColorType};
-use base64::{engine::general_purpose, Engine as _};
- */
+#[cfg(target_os = "windows")]
+use windows_icons::get_icon_base64_by_path;
+#[cfg(target_os = "macos")]
+use std::path::Path;
 
 use tauri::Manager;
 
-
-mod utils;
 mod lua_utils;
 mod files;
 
@@ -30,6 +21,7 @@ fn get_games() -> Vec<String> {
 
 #[tauri::command]
 async fn run_game(gameName: String) -> Result<String, String> {
+    //            ^^^^^^^^   MUST stay as camelCase. tauri invoke goes wrong if its snake_case.
     let _ = lua_utils::lua_run_game(&gameName)
         .await
         .map_err(|e| format!("Lua run error: {}", e));
@@ -38,14 +30,36 @@ async fn run_game(gameName: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn save_settings(dark: bool, dev: bool, close: bool) -> String {
+fn save_settings(dark: bool, dev: bool, close: bool, games: HashMap<String, String>) -> String {
     let _ = files::save_settings(&files::Settings{
         dark,
         dev,
-        close
+        close,
+        games
     });
 
     "Saved Settings".to_string()
+}
+
+#[tauri::command]
+fn get_game_path(gameName: &str) -> Result<String, String> {
+    //           ^^^^^^^^ Must stay as camelCase
+    let path = files::get_settings_path()
+        .ok_or("Settings path not found")?;
+
+    let data = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+
+    let settings: files::Settings = serde_json::from_str(&data)
+        .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+
+    let trimmed_name = gameName.trim();
+
+    let found = settings.games.iter()
+        .find(|(k, _)| k.trim().eq_ignore_ascii_case(trimmed_name))
+        .map(|(_, v)| v.clone());
+
+    found.ok_or_else(|| format!("Game '{}' not found in settings", gameName))
 }
 
 #[tauri::command]
@@ -76,108 +90,43 @@ fn get_settings() -> Result<Option<files::Settings>, String> {
     files::load_settings().map_err(|e| e.to_string())
 }
 
-/*
-        So this is a function that was writen to get the games ico file to render in flutter.
-        This does work and gets an error so,
-        Anyone who knows Rust fix my spagetti code 🙏
-        All imports used for this should be in Cargo.toml and commented above.        -- GlowyGhost 25/7/25
-
+#[cfg(target_os = "windows")]
 #[tauri::command]
-fn get_icon(_game_name: String) -> String {
-    let exe_path = "C:/Program Files (x86)/Steam/steamapps/common/Balatro/Balatro.exe";
-    let wide_path = utils::to_wide(exe_path);
-
-    unsafe {
-        let hicon = LoadImageW(
-            null_mut(),
-            wide_path.as_ptr(),
-            IMAGE_ICON,
-            256,
-            256,
-            LR_LOADFROMFILE,
-        ) as HICON;
-
-        if hicon.is_null() {
-            eprintln!("Failed to load icon from EXE at {}", exe_path);
-            return "".into();
+fn get_icon(exePath: String) -> Result<Option<String>, String> {
+    match get_icon_base64_by_path(&exePath) {
+        Ok(base64str) => Ok(Some(base64str)),
+        Err(e) => {
+            eprintln!("Icon extraction failed: {}", e);
+            Ok(None)
         }
-
-        let mut icon_info = std::mem::zeroed();
-        if GetIconInfo(hicon, &mut icon_info) == 0 {
-            eprintln!("GetIconInfo failed");
-            return "".into();
-        }
-
-        let hdc = CreateCompatibleDC(null_mut());
-        if hdc.is_null() {
-            eprintln!("CreateCompatibleDC failed");
-            return "".into();
-        }
-
-        let mut bi = BITMAPINFO {
-            bmiHeader: BITMAPINFOHEADER {
-                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as DWORD,
-                biWidth: 256,
-                biHeight: -256,
-                biPlanes: 1,
-                biBitCount: 32,
-                biCompression: BI_RGB,
-                biSizeImage: (256 * 256 * 4) as DWORD,
-                biXPelsPerMeter: 0,
-                biYPelsPerMeter: 0,
-                biClrUsed: 0,
-                biClrImportant: 0,
-            },
-            bmiColors: [RGBQUAD {
-                rgbBlue: 0,
-                rgbGreen: 0,
-                rgbRed: 0,
-                rgbReserved: 0,
-            }; 1],
-        };
-
-        let mut pixels = vec![0u8; 256 * 256 * 4];
-        let old = SelectObject(hdc, icon_info.hbmColor as _);
-
-        let res = GetDIBits(
-            hdc,
-            icon_info.hbmColor as HBITMAP,
-            0,
-            256,
-            pixels.as_mut_ptr() as _,
-            &mut bi,
-            DIB_RGB_COLORS,
-        );
-
-        SelectObject(hdc, old);
-        DeleteDC(hdc);
-        DeleteObject(icon_info.hbmColor as _);
-        DeleteObject(icon_info.hbmMask as _);
-
-        if res == 0 {
-            eprintln!("GetDIBits failed");
-            return "".into();
-        }
-
-        let mut rgba_data = vec![0u8; 256 * 256 * 4];
-        for i in 0..(256 * 256) {
-            rgba_data[i * 4] = pixels[i * 4 + 2];     // R
-            rgba_data[i * 4 + 1] = pixels[i * 4 + 1]; // G
-            rgba_data[i * 4 + 2] = pixels[i * 4];     // B
-            rgba_data[i * 4 + 3] = pixels[i * 4 + 3]; // A
-        }
-
-        let mut png_buf = Cursor::new(Vec::new());
-        let encoder = PngEncoder::new(&mut png_buf);
-        if let Err(e) = encoder.encode(&rgba_data, 256, 256, ColorType::Rgba8) {
-            eprintln!("PNG encode failed: {}", e);
-            return "".into();
-        }
-
-        let base64 = general_purpose::STANDARD.encode(png_buf.get_ref());
-        base64
     }
-} */
+}
+
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn get_icon(exePath: String) -> Result<Option<String>, String> {
+    let icon_path = Path::new(&exePath)
+        .join("Contents")
+        .join("Resources")
+        .join("AppIcon.icns");
+
+    if !icon_path.exists() {
+        return Ok(None);
+    }
+
+    let icns_data = std::fs::read(icon_path).map_err(|e| e.to_string())?;
+    let reader = icns::IconFamily::read(std::io::Cursor::new(icns_data)).map_err(|e| e.to_string())?;
+    let image = reader.get_best_icon().ok_or("No image found in icns")?;
+    let png_data = image.encode_png().map_err(|e| e.to_string())?;
+
+    Ok(Some(base64::engine::general_purpose::STANDARD.encode(png_data)))
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[tauri::command]
+fn get_icon(_exePath: String) -> Result<Option<String>, String> {
+    Ok(None)
+}
 
 #[tokio::main]
 async fn main() {
@@ -193,7 +142,6 @@ async fn main() {
 
                     let main_arg = args.join(" ");
 
-                    // This blocks the current thread until async task finishes
                     tokio::task::block_in_place(move || {
                         let rt = tokio::runtime::Handle::current();
                         rt.block_on(async move {
@@ -210,7 +158,7 @@ async fn main() {
             }
 
             Ok(())})
-        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app])
+        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app, get_icon, get_game_path])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
