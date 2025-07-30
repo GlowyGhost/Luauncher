@@ -148,10 +148,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class Settings extends ChangeNotifier {
-    bool oldDarkMode = true;
+	bool oldDarkMode = true;
 	bool isDarkMode = true;
 	bool isDevMode = false;
 	bool closeAfterOpen = true;
+	Map<String, String> gamePaths = {};
 
 	Future<void> loadSettings() async {
 		final settings = await tauriInvoke('get_settings');
@@ -159,11 +160,14 @@ class Settings extends ChangeNotifier {
 		isDarkMode = settings["dark"];
 		isDevMode = settings["dev"];
 		closeAfterOpen = settings["close"];
-        oldDarkMode = settings["dark"];
+
+		gamePaths = settings["games"];
+
+		oldDarkMode = settings["dark"];
 	}
 
 	Future<String> saveSettings() async {
-		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen});
+		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen, "games": gamePaths});
 
         if (oldDarkMode != isDarkMode) {
             if (settings.isDevMode) {
