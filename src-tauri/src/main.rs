@@ -43,15 +43,7 @@ fn save_settings(dark: bool, dev: bool, close: bool, games: HashMap<String, Stri
 
 #[tauri::command]
 fn get_game_path(gameName: &str) -> Result<String, String> {
-    //           ^^^^^^^^ Must stay as camelCase
-    let path = files::get_settings_path()
-        .ok_or("Settings path not found")?;
-
-    let data = std::fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read settings file: {}", e))?;
-
-    let settings: files::Settings = serde_json::from_str(&data)
-        .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+    let settings = files::load_settings().unwrap().unwrap();
 
     let trimmed_name = gameName.trim();
 
@@ -76,6 +68,69 @@ fn restart_app() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn make_plugin(name: String, path: String, code: String) -> Result<String, String> {
+    let mut settings = files::load_settings().unwrap().unwrap();
+    let mut games = settings.games;
+    games.insert(name.clone(), path);
+
+    settings.games = games;
+
+    let _ = files::save_settings(&settings);
+
+    let _ = files::save_script(&name, &files::get_file_content(code));
+    
+    Ok("Made Plugin".to_string())
+}
+
+#[tauri::command]
+fn save_game(mut path: String, name: String, oldn: String) -> Result<String, String> {
+    let mut settings = files::load_settings().unwrap().unwrap();
+    let mut games = settings.games;
+
+    if path == "" {
+        path = get_game_path(&oldn).unwrap_or("".to_string());
+
+        if path == "" {
+            return Ok("Err".to_owned())
+        }
+    }
+
+    games.remove(&oldn);
+    games.insert(name.clone(), path);
+
+    settings.games = games;
+
+    let oldnlua = format!("{}.lua", oldn);
+
+    let scripts_dir = files::get_scripts_dir().unwrap();
+    let content = files::get_file_content(format!("{}\\{oldnlua}", scripts_dir.to_string_lossy().to_string()));
+
+    let _ = files::delete_file(scripts_dir.join(&oldnlua));
+    let _ = files::save_script(&name, &content);
+
+    let _ = files::save_settings(&settings);
+    
+    Ok("Saved Game".to_string())
+}
+
+#[tauri::command]
+fn delete_game(name: String) -> Result<String, String> {
+    let path = files::get_scripts_dir().unwrap();
+    
+    let _ = files::delete_file(path.join(&format!("{}.lua", &name)));
+
+    let mut settings = files::load_settings().unwrap().unwrap();
+    let mut games = settings.games;
+    games.remove(&name);
+
+    settings.games = games;
+
+    let _ = files::save_settings(&settings);
+
+    Ok("Deleted Game".to_string())
+}
+
+#[tauri::command]
 fn hide_app(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("launcher") {
         window.hide().map_err(|e| e.to_string())?;
@@ -93,6 +148,7 @@ fn get_settings() -> Result<Option<files::Settings>, String> {
 #[cfg(target_os = "windows")]
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
+    //      ^^^^^^^ Still camelCase...
     match get_icon_base64_by_path(&exePath) {
         Ok(base64str) => Ok(Some(base64str)),
         Err(e) => {
@@ -105,6 +161,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 #[cfg(target_os = "macos")]
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
+    //      ^^^^^^^ Still camelCase... I hope you get the point now...
     let icon_path = Path::new(&exePath)
         .join("Contents")
         .join("Resources")
@@ -158,7 +215,7 @@ async fn main() {
             }
 
             Ok(())})
-        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app, get_icon, get_game_path])
+        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app, get_icon, get_game_path, make_plugin, save_game, delete_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
