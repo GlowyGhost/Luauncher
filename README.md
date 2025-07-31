@@ -20,7 +20,7 @@ Please note that this code is licensed under the [MIT License](./LICENSE).
 
 ## User Scripts
 
-Luauncher has lua built in via [mlua](https://github.com/mlua-rs/mlua). There are even built in functions too! There is examples here (Examples haven't been made yet). Here is every custom function introduced by Luauncher.
+Luauncher has lua built in via [mlua](https://github.com/mlua-rs/mlua). There are even custom functions too! There is examples here (Examples haven't been made yet). Here is every custom function introduced by Luauncher.
 
 ```lua
 sleep() --Sleeps for the duration in milliseconds.
