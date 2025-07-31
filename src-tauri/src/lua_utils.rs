@@ -38,8 +38,8 @@ fn get_custom_lua() -> Lua {
         wait_app_opened_async(process_name, timeout).await
     }).unwrap());
     
-    let _ = globals.set("sleep", lua.create_async_function(|_, seconds: u64| async move {
-        sleep(Duration::from_secs(seconds)).await;
+    let _ = globals.set("sleep", lua.create_async_function(|_, milliseconds: u64| async move {
+        sleep(Duration::from_millis(milliseconds)).await;
         Ok(())
     }).unwrap());
 
