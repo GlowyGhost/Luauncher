@@ -33,5 +33,5 @@ waitUntilWindowClose() --Waits until the window name is closed.
 waitUntilAppClose() --Waits until the app name is closed.
 waitUntilWindowOpen() --Waits for the amount of time and when the window is opened, it continues.
 waitUntilAppOpen() --Waits for the amount of time and when the app is opened, it continues.
-closeLauncherWindow() --Must be at the end of the file. Closes the Luauncher. You can provide a exit code.
+closeLauncherWindow() --Must be at the end of the file. Closes Luauncher. You can provide a exit code.
 ```
