@@ -31,7 +31,7 @@ isWindowOpen() --Returns a bool if the window name is open.
 openURL() --Opens the URL.
 waitUntilWindowClose() --Waits until the window name is closed.
 waitUntilAppClose() --Waits until the app name is closed.
-waitUntilWindowOpen() --Waits for the amount of time and when the window is opened, it continues.
-waitUntilAppOpen() --Waits for the amount of time and when the app is opened, it continues.
-closeLauncherWindow() --Must be at the end of the file. Closes Luauncher. You can send an exit code.
+waitUntilWindowOpen() --Waits for the amount of time and when the window opens, it continues. Returns true if it successed, false if it didn't.
+waitUntilAppOpen() --Waits for the amount of time and when the app is opens, it continues. Returns true if it successed, false if it didn't.
+closeLauncherWindow() --Must be at the end of the file. Closes Luauncher. You can send in an exit code.
 ```
