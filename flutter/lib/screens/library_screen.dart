@@ -48,30 +48,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
 	Future<void> _loadGames() async {
 		setState(() => _loading = true);
-    final gameNames = await tauriInvoke('get_games') as List<String>;
+		final gameNames = await tauriInvoke('get_games') as List<String>;
 
-    List<GameInfo> loadedGames = [];
+		List<GameInfo> loadedGames = [];
 
-    for (final name in gameNames) {
-      try {
-        final exePath = await tauriInvoke("get_game_path", {"gameName": name});
-        final base64Icon = await tauriInvoke("get_icon", {"exePath": exePath});
+		for (final name in gameNames) {
+			try {
+				final exePath = await tauriInvoke("get_game_path", {"gameName": name});
+				final base64Icon = await tauriInvoke("get_icon", {"exePath": exePath});
 
-        if (base64Icon == "" || base64Icon == null || base64Icon.isEmpty) {
-          loadedGames.add(GameInfo(name, null));
-        } else {
-          final icon = await base64ToImage(base64Icon);
+				if (base64Icon == "" || base64Icon == null || base64Icon.isEmpty) {
+					loadedGames.add(GameInfo(name, null));
+				} else {
+					final icon = await base64ToImage(base64Icon);
 
-          loadedGames.add(GameInfo(name, icon));
-        }
-      } catch (e) {
-        loadedGames.add(GameInfo(name, null));
+					loadedGames.add(GameInfo(name, icon));
+				}
+			} catch (e) {
+				loadedGames.add(GameInfo(name, null));
 
-        if (settings.isDevMode) {
-          logger.add("Error loading icon for $name: $e");
-        }
-      }
-    }
+				if (settings.isDevMode) {
+					logger.add("Error loading icon for $name: $e");
+				}
+			}
+		}
 
 		setState(() {
 			_games = loadedGames;
@@ -80,25 +80,81 @@ class _LibraryScreenState extends State<LibraryScreen> {
 	}
 
 	Future<void> _launchGame(String game) async {
-    if (settings.isDevMode) {
-      logger.add("[library.dart] Opening game $game");
-    }
+		if (settings.isDevMode) {
+			logger.add("[library.dart] Opening game $game");
+		}
 
-    if (settings.closeAfterOpen) {
-      await tauriInvoke("hide_app");
-    }
+		if (settings.closeAfterOpen) {
+			await tauriInvoke("hide_app");
+		}
 
-    ScaffoldMessenger.of(context).showSnackBar(
+		ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text('Launching $game')),
 		);
 
-    await tauriInvoke("run_game", {"gameName": game});
+		await tauriInvoke("run_game", {"gameName": game});
 	}
 
 	void _onAddGame() {
-		ScaffoldMessenger.of(context).showSnackBar(
-			const SnackBar(content: Text('Add Game pressed')),
-		);
+		String path = "";
+		String name = "";
+		String code = "";
+
+		showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                title: Text('Add Game'),
+                content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                        TextField(
+                            decoration: InputDecoration(labelText: 'Name'),
+                            onChanged: (value) => name = value,
+                        ),
+                        TextField(
+                            decoration: InputDecoration(labelText: 'Path to executable'),
+                            onChanged: (value) => path = value,
+                        ),
+                        TextField(
+                            decoration: InputDecoration(labelText: "Path to script"),
+                            onChanged: (value) => code = value,
+                        ),
+                    ],
+                ),
+                actions: [
+					TextButton(
+						onPressed: () => Navigator.pop(context),
+						child: Text('Cancel'),
+					),
+					TextButton(
+						onPressed: () async {
+							if (settings.isDevMode) {
+								logger.add("[library.dart] name: $name");
+								logger.add("[library.dart] path: $path");
+								logger.add("[library.dart] code: $code");
+							}
+
+							Navigator.pop(context);
+
+							for (final game in _games) {
+								if (game.name == name) {
+									ScaffoldMessenger.of(context).showSnackBar(
+										SnackBar(content: Text('Game $name already exists.')),
+									);
+
+									return;
+								}
+							}
+
+							await tauriInvoke("make_plugin", {"name": name, "path": path, "code": code});
+
+							_loadGames();
+						},
+						child: Text('Add'),
+					),
+                ],
+            ),
+        );
 	}
 
 	@override
@@ -137,11 +193,85 @@ class _LibraryScreenState extends State<LibraryScreen> {
 										final game = _games[index];
 										final isSelected = _selectedGame == game;
 
+										String name = game.name;
+										String path = "";
+
 										return ListTile(
 											title: Text(game.name, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
 											leading: game.icon ?? const Icon(Icons.videogame_asset),
 											tileColor: isSelected ? Colors.grey[800] : null,
 											onTap: () => _launchGame(game.name),
+											
+											trailing: PopupMenuButton<String>(
+												icon: Icon(Icons.more_vert, color: settings.oldDarkMode ? Colors.white : Colors.black),
+												onSelected: (value) async {
+													if (value == 'edit') {
+														String defaultPath = await tauriInvoke("get_game_path", {"gameName": game.name});
+														TextEditingController pathController = TextEditingController(text: defaultPath);
+														TextEditingController nameController = TextEditingController(text: game.name);
+
+														showDialog(
+															context: context,
+															builder: (context) => AlertDialog(
+																title: Text(game.name),
+																content: Column(
+																	mainAxisSize: MainAxisSize.min,
+																	children: [
+																		TextField(
+																			controller: nameController,
+																			decoration: InputDecoration(labelText: 'Name'),
+																			onChanged: (value) => name = value,
+																		),
+																		TextField(
+																			controller: pathController,
+																			decoration: InputDecoration(labelText: 'Path to executable'),
+																			onChanged: (value) => path = value,
+																		),
+																	],
+																),
+																actions: [
+																	TextButton(
+																		onPressed: () => Navigator.pop(context),
+																		child: Text('Cancel'),
+																	),
+																	TextButton(
+																		onPressed: () async {
+																			Navigator.pop(context);
+																			String res = await tauriInvoke("save_game", {
+																				"path": path,
+																				"name": name,
+																				"oldn": game.name
+																			});
+
+																			if (res == "Err") {
+																				ScaffoldMessenger.of(context).showSnackBar(
+																					SnackBar(content: Text("Error Saving: Game not found in settings.")),
+																				);
+																			}
+
+																			_loadGames();
+																		},
+																		child: Text('Save'),
+																	),
+																],
+															),
+														);
+														} else if (value == 'delete') {
+															await tauriInvoke("delete_game", {"name": game.name});
+															_loadGames();
+														}
+													}, 
+													itemBuilder: (context) => [
+														PopupMenuItem(
+															value: 'edit',
+															child: Text('Edit'),
+														),
+														PopupMenuItem(
+															value: 'delete',
+															child: Text('Delete'),
+														),
+													],
+												),
 										);
 									},
 								),
