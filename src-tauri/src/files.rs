@@ -81,6 +81,10 @@ pub(crate) fn list_scripts() -> std::io::Result<Vec<String>> {
     Ok(vec![])
 }
 
+pub(crate) fn delete_file(path: PathBuf) -> std::io::Result<()> {
+    fs::remove_file(path)
+}
+
 pub(crate) fn make_dirs() {
     let app_dir = get_app_base();
 
