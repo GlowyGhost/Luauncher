@@ -119,3 +119,7 @@ pub(crate) fn make_dirs() {
         }
     }
 }
+
+pub(crate) fn write_file(path: PathBuf, contents: &str) -> Result<(), std::io::Error> {
+    fs::write(path, contents)
+}
