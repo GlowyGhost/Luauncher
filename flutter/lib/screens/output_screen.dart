@@ -10,6 +10,30 @@ class OutputScreen extends StatefulWidget {
 }
 
 class _OutputScreenState extends State<OutputScreen> {
+	void showBar(String text) {
+		ScaffoldMessenger.of(context).showSnackBar(
+			SnackBar(content: Text(text)),
+		);
+	}
+
+	Future<void> save() async {
+		List<String> logs = logger._logs;
+		String log = logs.join("\n");
+
+		String res = await tauriInvoke('save_log', {"log": log});
+
+		if (res == "Success") {
+			showBar("Saved File Successfully");
+		} else if (res == "Cancelled") {
+			showBar("Cancelled Save");
+		} else {
+			showBar("An Error Occurred. Please Try again Later.");
+			if (settings.isDevMode) {
+				logger.add("[output_screen.dart] Error saving file: $res");
+			}
+		}
+	}
+	
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -22,6 +46,12 @@ class _OutputScreenState extends State<OutputScreen> {
 								onPressed: logger.clear,
 								icon: const Icon(Icons.clear),
 								label: Text("Clear", style: TextStyle(fontSize: 18))
+							),
+							const SizedBox(width: 10),
+							ElevatedButton.icon(
+								onPressed: save,
+								icon: const Icon(Icons.save),
+								label: Text("Save", style: TextStyle(fontSize: 18))
 							)
 						],
 					)
