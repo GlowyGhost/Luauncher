@@ -86,58 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 										setState(() => settings.closeAfterOpen = value);
 									},
 								),
-
-								/* const SizedBox(height: 10),
-
-								// Textbox
-								TextField(
-									decoration: const InputDecoration(
-										labelText: 'Username',
-										border: OutlineInputBorder(),
-									),
-									onChanged: (value) {
-										setState(() => _username = value);
-									},
-								),
-
-								const SizedBox(height: 20),
-
-								// Dropdown
-								DropdownButtonFormField<String>(
-									decoration: const InputDecoration(
-										labelText: 'Language',
-										border: OutlineInputBorder(),
-									),
-									value: _selectedLanguage,
-									onChanged: (value) {
-										if (value != null) {
-											setState(() => _selectedLanguage = value);
-										}
-									},
-									items: _languages.map((lang) {
-										return DropdownMenuItem(value: lang, child: Text(lang));
-									}).toList(),
-								),
-
-								const SizedBox(height: 20),
-
-								// Slider
-								Column(
-									crossAxisAlignment: CrossAxisAlignment.start,
-									children: [
-										const Text("Volume"),
-										Slider(
-											value: _volume,
-											min: 0,
-											max: 1,
-											divisions: 10,
-											label: (_volume * 100).toInt().toString(),
-											onChanged: (value) {
-												setState(() => _volume = value);
-											},
-										),
-									],
-								), */
 							],
 						),
 					)
@@ -182,3 +130,4 @@ class Settings extends ChangeNotifier {
 }
 
 final settings = Settings();
+
