@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 
+use rfd::FileDialog;
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
 #[cfg(target_os = "macos")]
@@ -145,6 +146,28 @@ fn get_settings() -> Result<Option<files::Settings>, String> {
     files::load_settings().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn save_log(log: String) -> Result<String, String> {
+    if let Some(path) = FileDialog::new()
+        .set_file_name("log.txt") // suggest a default name
+        .save_file()
+    {
+        let res = files::write_file(path, &log);
+
+        match res {
+            Ok(_file) => {
+                return Ok("Success".to_string())
+            }
+
+            Err(e) => {
+                return Err(e.to_string())
+            }
+        }
+    } else {
+        return Ok("Cancelled".to_string())
+    }
+
+
 #[cfg(target_os = "windows")]
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
@@ -215,7 +238,8 @@ async fn main() {
             }
 
             Ok(())})
-        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app, get_icon, get_game_path, make_plugin, save_game, delete_game])
+        .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app,
+            get_icon, get_game_path, make_plugin, save_game, delete_game, save_log])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
