@@ -12,7 +12,6 @@ A cross-platform game launcher using:
  * Flutter for frontend.
  * Rust for backend.
  * Lua for user written scripts.
- * Tauri for rendering Flutter.
 
 **All contributions are welcome!** More info about contrinution [here](./docs/CONTRIBUTING.md).
 
@@ -34,4 +33,11 @@ waitUntilAppClose() --Waits until the app name is closed.
 waitUntilWindowOpen() --Waits for the amount of time and when the window opens, it continues. Returns true if it succeeded, false if it didn't.
 waitUntilAppOpen() --Waits for the amount of time and when the app is opens, it continues. Returns true if it succeeded, false if it didn't.
 closeLauncherWindow() --Must be at the end of the file. Closes Luauncher. You can send in an exit code.
+runCommand() --Runs a command on the users terminal
+```
+
+There's also some variables.
+
+```lua
+system --String thats says the users system (Windows, Linux, MacOS)
 ```
