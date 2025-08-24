@@ -3,6 +3,8 @@ use mlua::prelude::*;
 use std::process::Command;
 use std::path::PathBuf;
 use tokio::time::{sleep, Duration};
+use std::ffi::CStr;
+use std::os::raw::c_char;
 
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::FindWindowA;
@@ -10,6 +12,18 @@ use winapi::um::winuser::FindWindowA;
 use std::{ffi::CString, ptr::null_mut};
 
 use crate::files::{self, get_scripts_dir};
+
+#[link(name = "lua", kind = "static")]
+unsafe extern "C" {
+    fn subsystem() -> *const c_char;
+    fn run_command(arg: *const c_char) -> i32;
+}
+
+fn from_c_char(string: *const c_char) -> &'static str {
+    unsafe {
+        CStr::from_ptr(string).to_str().unwrap()
+    }
+}
 
 fn get_custom_lua() -> Lua {
     let lua = Lua::new();
@@ -21,6 +35,7 @@ fn get_custom_lua() -> Lua {
     let _ = globals.set("isWindowOpen", lua.create_function(is_window_open).unwrap());
     let _ = globals.set("openURL", lua.create_function(open_url).unwrap());
     let _ = globals.set("closeLauncherWindow", lua.create_function(close_launcher_window).unwrap());
+    let _ = globals.set("runCommand", lua.create_function(run_command_lua).unwrap());
 
     let _ = globals.set("waitUntilWindowClose", lua.create_async_function(|_lua, window_name: String| async move {
         wait_until_window_closed_async(window_name).await
@@ -42,6 +57,10 @@ fn get_custom_lua() -> Lua {
         sleep(Duration::from_millis(milliseconds)).await;
         Ok(())
     }).unwrap());
+
+    let _ = globals.set("system", lua.create_string(from_c_char(
+        unsafe { subsystem() }
+    )).unwrap());
 
     lua
 }
@@ -340,6 +359,15 @@ fn close_launcher_window(_lua: &Lua, arg: Option<u64>) -> mlua::Result<()> {
         Err(e) => {
             return Err(LuaError::external(format!("Failed to load settings: {}", e)));
         }
+    }
+
+    Ok(())
+}
+fn run_command_lua(_lua: &Lua, arg: String) -> mlua::Result<()> {
+    unsafe {
+        let c_str = CString::new(arg).expect("CString::new failed");
+
+        run_command(c_str.as_ptr());
     }
 
     Ok(())
