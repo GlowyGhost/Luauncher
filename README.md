@@ -32,7 +32,7 @@ waitUntilWindowClose() --Waits until the window name is closed.
 waitUntilAppClose() --Waits until the app name is closed.
 waitUntilWindowOpen() --Waits for the amount of time and when the window opens, it continues. Returns true if it succeeded, false if it didn't.
 waitUntilAppOpen() --Waits for the amount of time and when the app is opens, it continues. Returns true if it succeeded, false if it didn't.
-closeLauncherWindow() --Must be at the end of the file. Closes Luauncher. You can send in an exit code.
+exit() --Exits the lua script. You can exit with an error code.
 runCommand() --Runs a command on the users terminal
 ```
 
