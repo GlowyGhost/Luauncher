@@ -1,6 +1,6 @@
 # Contributing
 ## Requirements
-To work on this project, you need to have installed [Flutter](https://docs.flutter.dev/get-started/install?_gl=1*h6bu5u*_ga*MTg5MDAyODE1OS4xNzUzMTgwMzIy*_ga_04YGWK0175*czE3NTMzNTExMjYkbzIkZzAkdDE3NTMzNTExMjYkajYwJGwwJGgw), [Rust](https://www.rust-lang.org/learn/get-started), [Tauri](https://v2.tauri.app/) using `cargo install tauri-cli` and a C compiler. You may need to install tauri dependencies depending on your platform, there's info about this [here](https://v1.tauri.app/v1/guides/getting-started/prerequisites).
+To work on this project, you need to have installed [Flutter](https://docs.flutter.dev/get-started/install?_gl=1*h6bu5u*_ga*MTg5MDAyODE1OS4xNzUzMTgwMzIy*_ga_04YGWK0175*czE3NTMzNTExMjYkbzIkZzAkdDE3NTMzNTExMjYkajYwJGwwJGgw), [Rust](https://www.rust-lang.org/learn/get-started) and [Tauri](https://v2.tauri.app/) using `cargo install tauri-cli`. You may need to install tauri dependencies depending on your platform, there's info about this [here](https://v1.tauri.app/v1/guides/getting-started/prerequisites).
 
 ## Info
 ### Flutter
@@ -8,9 +8,6 @@ Everything for Flutter side of things is in the flutter sub-directory. All the f
 
 ### Tauri
 All the files on the Tauri side will be in src-tauri sub-directory. src has the rust files that you should be editing. In the root of the project run `cargo tauri dev` (Use this for hot-reload) or in src-tauri run `cargo run` (For most use-cases, this is better), this will install and build Tauri dependencies in the project before building the actual project. After building it will run the app for you. This will be located in src-tauri/target.
-
-### C
-All the C files are in `src-tauri/csrc`. C is automatically compiled when building the rust app, the cc crate does this for us in the build.rs file.
 
 ## Help
 ### Flutter showing an old version
