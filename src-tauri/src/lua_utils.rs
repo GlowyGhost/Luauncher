@@ -3,27 +3,15 @@ use mlua::prelude::*;
 use std::process::Command;
 use std::path::PathBuf;
 use tokio::time::{sleep, Duration};
-use std::ffi::CStr;
-use std::os::raw::c_char;
+use rfd::MessageDialog;
 
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::FindWindowA;
 #[cfg(target_os = "windows")]
 use std::{ffi::CString, ptr::null_mut};
 
+use crate::dart::{self};
 use crate::files::{self, get_scripts_dir};
-
-#[link(name = "lua", kind = "static")]
-unsafe extern "C" {
-    fn subsystem() -> *const c_char;
-    fn run_command(arg: *const c_char) -> i32;
-}
-
-fn from_c_char(string: *const c_char) -> &'static str {
-    unsafe {
-        CStr::from_ptr(string).to_str().unwrap()
-    }
-}
 
 fn get_custom_lua() -> Lua {
     let lua = Lua::new();
@@ -31,11 +19,12 @@ fn get_custom_lua() -> Lua {
 
     let _ = globals.set("openApp", lua.create_function(open_app).unwrap());
     let _ = globals.set("closeApp", lua.create_function(close_app).unwrap());
+    let _ = globals.set("forceCloseApp", lua.create_function(force_close_app).unwrap());
     let _ = globals.set("isAppOpen", lua.create_function(is_app_open).unwrap());
     let _ = globals.set("isWindowOpen", lua.create_function(is_window_open).unwrap());
     let _ = globals.set("openURL", lua.create_function(open_url).unwrap());
-    let _ = globals.set("closeLauncherWindow", lua.create_function(close_launcher_window).unwrap());
-    let _ = globals.set("runCommand", lua.create_function(run_command_lua).unwrap());
+    let _ = globals.set("exit", lua.create_function(exit).unwrap());
+    let _ = globals.set("runCommand", lua.create_function(command).unwrap());
 
     let _ = globals.set("waitUntilWindowClose", lua.create_async_function(|_lua, window_name: String| async move {
         wait_until_window_closed_async(window_name).await
@@ -58,10 +47,21 @@ fn get_custom_lua() -> Lua {
         Ok(())
     }).unwrap());
 
-    let _ = globals.set("system", lua.create_string(from_c_char(
-        unsafe { subsystem() }
-    )).unwrap());
+    let _ = globals.set("messageBox", lua.create_function(|_, (title, desc): (String, String)| {
+        message_box(title, desc);
 
+        Ok(())
+    }).unwrap());
+
+    let _ = globals.set("log", lua.create_function(|_, (name, message): (String, String)| {
+        dart::log_to_output(&name, message);
+
+        Ok(())
+    }).unwrap());
+
+    let _ = globals.set("system", lua.create_string(system()).unwrap_or(
+        lua.create_string("Unknown".to_owned()).unwrap()
+    ));
     lua
 }
 
@@ -99,7 +99,7 @@ fn close_app(_lua: &Lua, process_name: String) -> mlua::Result<()> {
         let escaped = process_name.replace("&", "^&");
 
         Command::new("taskkill")
-            .args(["/IM", &escaped, "/F"])
+            .args(["/IM", &escaped])
             .output()
             .map_err(mlua::Error::external)?;
     }
@@ -108,6 +108,27 @@ fn close_app(_lua: &Lua, process_name: String) -> mlua::Result<()> {
     {
         Command::new("pkill")
             .arg(&process_name)
+            .output()
+            .map_err(mlua::Error::external)?;
+    }
+
+    Ok(())
+}
+fn force_close_app(_lua: &Lua, process_name: String) -> mlua::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let escaped = process_name.replace("&", "^&");
+
+        Command::new("taskkill")
+            .args(["/IM", &escaped, "/F"])
+            .output()
+            .map_err(mlua::Error::external)?;
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        Command::new("pkill")
+            .arg("-9", &process_name)
             .output()
             .map_err(mlua::Error::external)?;
     }
@@ -343,7 +364,7 @@ async fn wait_window_opened_async(title: String, timeout_ms: u64) -> LuaResult<b
     }
     Ok(false)
 }
-fn close_launcher_window(_lua: &Lua, arg: Option<u64>) -> mlua::Result<()> {
+fn exit(_lua: &Lua, arg: Option<u64>) -> mlua::Result<()> {
     let err_code = arg.unwrap_or(0)
                             .try_into().unwrap_or(1);
 
@@ -363,14 +384,54 @@ fn close_launcher_window(_lua: &Lua, arg: Option<u64>) -> mlua::Result<()> {
 
     Ok(())
 }
-fn run_command_lua(_lua: &Lua, arg: String) -> mlua::Result<()> {
-    unsafe {
-        let c_str = CString::new(arg).expect("CString::new failed");
+fn system() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        return "Windows".to_owned()
+    }
 
-        run_command(c_str.as_ptr());
+    #[cfg(target_os = "macos")]
+    {
+        return "MacOS".to_owned()
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        return "Linux".to_owned()
+    }
+}
+fn run_command(cmd: String) {
+    let _ = Command::new("cmd")
+        .args(&["/C", &cmd])
+        .status()
+        .expect("Failed to execute command");
+}
+fn command(lua: &Lua, cmd: String) -> mlua::Result<()> {
+    match files::load_settings() {
+        Ok(Some(settings)) => {
+            if settings.dev {
+                run_command(cmd);
+            } else {
+                message_box("Developer mod off".to_owned(), "Script attempted to run \"runCommand\" on your computer without Developer mod on. For your safety, the script wasn't allowed to run their command.".to_owned());
+                return exit(lua, Some(99));
+            }
+        }
+        Ok(None) => {
+            println!("Settings not found.");
+        }
+        Err(e) => {
+            return Err(LuaError::external(format!("Failed to load settings: {}", e)));
+        }
     }
 
     Ok(())
+}
+fn message_box(title: String, desc: String) {
+    MessageDialog::new()
+        .set_title(title)
+        .set_description(desc)
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
 }
 
 pub(crate) async fn lua_run_game(script_name: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -391,6 +452,8 @@ pub(crate) async fn lua_run_game(script_name: &str) -> Result<(), Box<dyn std::e
     let res = chunk.eval_async::<Value>().await?;
 
     println!("[{script_name}] {res:?}");
+
+    let _ = exit(&Lua::new(), Some(0));
 
     Ok(())
 }
