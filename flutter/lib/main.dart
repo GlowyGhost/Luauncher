@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:launcher/screens/output_screen.dart';
+import 'package:launcher/tauri_invoke.dart';
+import 'screens/output_screen.dart';
 import 'launcher_window.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
   runApp(const App());
+
+  createListeners();
 }
 
 class App extends StatefulWidget {
