@@ -35,6 +35,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 		}
 	}
 
+  void _uninstall() async {
+    await tauriInvoke('uninstall');
+  }
+
+  void _update() async {
+    await tauriInvoke('update');
+  }
+
 	@override
 	Widget build(BuildContext context) {
 		return Column(
@@ -88,6 +96,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 								),
 							],
 						),
+
+            bottomNavigationBar: Padding(
+              padding: EdgeInsetsGeometry.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () => _uninstall(),
+                    child: Text("Uninstall", style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  TextButton(
+                    onPressed: () => _update(),
+                    child: Text("Update", style: TextStyle(fontSize: 24, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
+                  ),
+                ],
+              )
+            ),
 					)
 				)
 			],
@@ -130,4 +158,3 @@ class Settings extends ChangeNotifier {
 }
 
 final settings = Settings();
-
