@@ -10,7 +10,6 @@ use winapi::um::winuser::FindWindowA;
 #[cfg(target_os = "windows")]
 use std::{ffi::CString, ptr::null_mut};
 
-use crate::dart::{self};
 use crate::files::{self, get_scripts_dir};
 
 fn get_custom_lua() -> Lua {
@@ -49,12 +48,6 @@ fn get_custom_lua() -> Lua {
 
     let _ = globals.set("messageBox", lua.create_function(|_, (title, desc): (String, String)| {
         message_box(title, desc);
-
-        Ok(())
-    }).unwrap());
-
-    let _ = globals.set("log", lua.create_function(|_, (name, message): (String, String)| {
-        dart::log_to_output(&name, message);
 
         Ok(())
     }).unwrap());
@@ -453,7 +446,7 @@ pub(crate) async fn lua_run_game(script_name: &str) -> Result<(), Box<dyn std::e
 
     println!("[{script_name}] {res:?}");
 
-    let _ = exit(&Lua::new(), Some(0));
+    let _ = exit(&lua, Some(0));
 
     Ok(())
 }
