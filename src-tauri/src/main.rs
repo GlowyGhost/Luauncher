@@ -133,11 +133,11 @@ fn delete_game(name: String) -> Result<String, String> {
 
 #[tauri::command]
 fn hide_app(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("launcher") {
+    if let Some(window) = app.get_webview_window("Luauncher") {
         window.hide().map_err(|e| e.to_string())?;
         Ok(())
     } else {
-        Err("Window 'launcher' not found".to_owned())
+        Err("Window 'Luauncher' not found".to_owned())
     }
 }
 
@@ -149,7 +149,7 @@ fn get_settings() -> Result<Option<files::Settings>, String> {
 #[tauri::command]
 fn save_log(log: String) -> Result<String, String> {
     if let Some(path) = FileDialog::new()
-        .set_file_name("log.txt") // suggest a default name
+        .set_file_name("log.txt")
         .save_file()
     {
         let res = files::write_file(path, &log);
@@ -166,7 +166,7 @@ fn save_log(log: String) -> Result<String, String> {
     } else {
         return Ok("Cancelled".to_string())
     }
-
+}
 
 #[cfg(target_os = "windows")]
 #[tauri::command]
@@ -179,6 +179,16 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
             Ok(None)
         }
     }
+}
+
+#[tauri::command]
+fn uninstall() -> Result<String, String> {
+    Ok("TODO".to_string())
+}
+
+#[tauri::command]
+fn update() -> Result<String, String> {
+    Ok("TODO".to_string())
 }
 
 #[cfg(target_os = "macos")]
@@ -212,7 +222,7 @@ fn get_icon(_exePath: String) -> Result<Option<String>, String> {
 async fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            if let Some(window) = app.get_webview_window("launcher") {
+            if let Some(window) = app.get_webview_window("Luauncher") {
                 window.hide().unwrap();
 
                 let mut args: Vec<String> = std::env::args().collect();
@@ -234,12 +244,12 @@ async fn main() {
                     window.show().unwrap();
                 }
             } else {
-                println!("No window labeled 'launcher' found.");
+                println!("No window labeled 'Luauncher' found.");
             }
 
             Ok(())})
         .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app,
-            get_icon, get_game_path, make_plugin, save_game, delete_game, save_log])
+            get_icon, get_game_path, make_plugin, save_game, delete_game, save_log, uninstall, update])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
