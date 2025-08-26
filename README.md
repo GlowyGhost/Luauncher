@@ -36,7 +36,6 @@ waitUntilAppOpen() --Waits for the amount of time and when the app is opens, it 
 exit() --Exits the lua script. You can exit with an error code.
 runCommand() --Runs a command on the users terminal. The user must have dev mode on.
 messageBox() --Makes a message box pop up with title and desc.
-log() --Write things to the output.
 ```
 
 There's also some variables.
