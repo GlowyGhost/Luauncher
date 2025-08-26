@@ -11,9 +11,6 @@ import 'screens/output_screen.dart';
 @JS('window.__TAURI__.core.invoke')
 external dynamic _invoke(String cmd, [dynamic args]);
 
-@JS('window.__TAURI__.event.listen')
-external dynamic _listen(String eventName, Function callback);
-
 Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
   if (settings.isDevMode) {
     logger.add("[tauri_invoke.dart] Invoking command $cmd");
@@ -57,22 +54,4 @@ Future<Image> base64ToImage(String base64String) async {
 	} catch (e) {
 		throw Exception("Failed to decode base64 icon: $e");
 	}
-}
-
-void createListeners() {
-	if (settings.isDevMode) {
-		logger.add("[tauri_invoke.dart] Creating Listeners");
-	}
-
-	_listen('log', allowInterop((dynamic event) {
-		try {
-			final payload = event['payload'];
-			final log = payload['info'];
-
-			logger.add("Hello");
-			logger.add(log);
-		} catch (e) {
-			logger.add("Error processing event: $e");
-		}
-	}));
 }
