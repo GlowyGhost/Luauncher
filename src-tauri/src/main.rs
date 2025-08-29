@@ -3,13 +3,15 @@
 
 use std::collections::HashMap;
 
-use rfd::FileDialog;
+use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
 #[cfg(target_os = "macos")]
 use std::path::Path;
 
 use tauri::Manager;
+
+use serde::Deserialize;
 
 mod lua_utils;
 mod files;
@@ -183,12 +185,54 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 
 #[tauri::command]
 fn uninstall() -> Result<String, String> {
-    Ok("TODO".to_string())
+    let res = MessageDialog::new()
+        .set_title("Uninstall")
+        .set_description("Are you sure you want to uninstall Luauncher?")
+        .set_buttons(rfd::MessageButtons::YesNo)
+        .show();
+
+    if res == MessageDialogResult::Yes {
+        return files::extract_updater("uninstall", std::env::current_exe().unwrap());
+    }
+    Ok("Undid".to_string())
+}
+
+#[derive(Deserialize)]
+struct Release {
+    name: String
 }
 
 #[tauri::command]
-fn update() -> Result<String, String> {
-    Ok("TODO".to_string())
+async fn update() -> Result<String, String> {
+    let url = "https://api.github.com/repos/GlowyGhost/Luauncher/releases/latest";
+
+    let client = reqwest::Client::new();
+    let mut res = client
+        .get(url)
+        .header("User-Agent", "Luauncher-app")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json::<Release>()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    res.name.remove(0);
+
+    if res.name == env!("CARGO_PKG_VERSION") {
+        return Ok("No Update".to_string());
+    }
+
+    let res_msg = MessageDialog::new()
+        .set_title("Update")
+        .set_description(format!("Are you sure you want to update Luauncher from {} to {}?", env!("CARGO_PKG_VERSION"), res.name))
+        .set_buttons(rfd::MessageButtons::YesNo)
+        .show();
+
+    if res_msg == MessageDialogResult::Yes {
+        return files::extract_updater("update", std::env::current_exe().unwrap());
+    }
+    Ok("Undid".to_string())
 }
 
 #[cfg(target_os = "macos")]
