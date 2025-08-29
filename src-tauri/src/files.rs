@@ -1,11 +1,21 @@
 use directories::BaseDirs;
 use std::collections::HashMap;
-use std::{fs};
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
+use std::{env, fs, io::Write, process::Command};
+use uuid::Uuid;
+
+#[cfg(target_os = "windows")]
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater.exe");
+
+#[cfg(target_os = "linux")]
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater");
+
+#[cfg(target_os = "macos")]
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater");
 
 pub(crate) fn get_app_base() -> Option<PathBuf> {
-    BaseDirs::new().map(|dirs| dirs.config_dir().join("launcher"))
+    BaseDirs::new().map(|dirs| dirs.config_dir().join("Luauncher"))
 }
 
 pub(crate) fn get_settings_path() -> Option<PathBuf> {
@@ -100,8 +110,6 @@ pub(crate) fn make_dirs() {
 
     if let Err(e) = fs::create_dir_all(&scripts_dir) {
         eprintln!("Failed to create scripts directory: {e}");
-    } else {
-        println!("Ensured scripts directory exists at {:?}", scripts_dir);
     }
 
     if !settings_path.exists() {
@@ -114,12 +122,38 @@ pub(crate) fn make_dirs() {
 
         if let Err(e) = fs::write(&settings_path, default_settings) {
             eprintln!("Failed to write default settings: {e}");
-        } else {
-            println!("Wrote default settings to {:?}", settings_path);
         }
     }
 }
 
 pub(crate) fn write_file(path: PathBuf, contents: &str) -> Result<(), std::io::Error> {
     fs::write(path, contents)
+}
+
+pub(crate) fn extract_updater(arg: &str, path: PathBuf) -> Result<String, String> {
+    let mut temp_path = env::temp_dir();
+
+    #[cfg(target_os = "windows")]
+    let filename = "Luauncher-Uninstaller-".to_string()+&Uuid::new_v4().to_string()+".exe";
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    let filename = "Luauncher-Uninstaller-".to_string()+&Uuid::new_v4().to_string();
+
+    temp_path.push(&filename);
+
+    let mut file = fs::File::create(&temp_path).unwrap();
+    let _ = file.write_all(EMBEDDED_BIN);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&temp_path)?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&temp_path, perms)?;
+    }
+
+    let _ = Command::new("cmd")
+        .args(["/C", "start", "", &temp_path.to_string_lossy().to_string(), arg, &path.to_string_lossy().to_string()])
+        .spawn();
+
+    Ok(filename)
 }
