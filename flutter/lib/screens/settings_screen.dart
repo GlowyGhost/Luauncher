@@ -35,12 +35,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 		}
 	}
 
+  void showBar(String text) {
+		ScaffoldMessenger.of(context).showSnackBar(
+			SnackBar(content: Text(text)),
+		);
+	}
+
   void _uninstall() async {
-    await tauriInvoke('uninstall');
+    String res = await tauriInvoke('uninstall');
+
+    if (res == "Undid") {
+      showBar("Cancelled Uninstall");
+    }
   }
 
   void _update() async {
-    await tauriInvoke('update');
+    String res = await tauriInvoke('update');
+
+    if (res == "Undid") {
+      showBar("Cancelled Update");
+    } else if (res == "No Update") {
+      showBar("There currently is no new availiable update.");
+    }
   }
 
 	@override
@@ -103,15 +119,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton(
-                    onPressed: () => _uninstall(),
-                    child: Text("Uninstall", style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                    onPressed: () => _update(),
+                    child: Text("Update", style: TextStyle(fontSize: 24, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
                   ),
-
+                
                   const SizedBox(height: 20),
 
                   TextButton(
-                    onPressed: () => _update(),
-                    child: Text("Update", style: TextStyle(fontSize: 24, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
+                    onPressed: () => _uninstall(),
+                    child: Text("Uninstall", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent)),
                   ),
                 ],
               )
