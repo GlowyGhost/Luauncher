@@ -12,9 +12,13 @@ use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 use windows_icons::get_icon_base64_by_path;
 
 #[cfg(target_os = "macos")]
-use std::{path::Path, fs};
+use icns::{IconFamily, IconType};
 #[cfg(target_os = "macos")]
-use icns2png::convert_icns_file_to_png;
+use image::{ImageBuffer, Rgba};
+#[cfg(target_os = "macos")]
+use std::{fs::File, io::{BufReader, Cursor}, path::Path};
+#[cfg(target_os = "macos")]
+use base64::Engine;
 
 mod lua_utils;
 mod files;
@@ -268,7 +272,49 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    let png_data = convert_icns_file_to_png(&icon_path).map_err(|e| e.to_string())?;
+    // Read the ICNS file
+    let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
+    let icon_family = IconFamily::read(file).map_err(|e| e.to_string())?;
+
+    // Preferred icon types, largest first
+    let preferred_icons = [
+        IconType::ARGB32_512x512,
+        IconType::ARGB32_256x256,
+        IconType::ARGB32_128x128,
+        IconType::RGB24_128x128,
+    ];
+
+    // Find the first available icon
+    let icon = preferred_icons
+        .iter()
+        .find_map(|&icon_type| icon_family.get_icon_with_type(icon_type).ok())
+        .ok_or("No suitable icon found in ICNS")?;
+
+    let width = icon.width();
+    let height = icon.height();
+
+    // Convert pixels: ARGB -> RGBA
+    let pixels: Vec<u8> = match icon.pixel_format() {
+        icns::PixelFormat::ARGB32 => icon
+            .pixels()
+            .chunks_exact(4)
+            .flat_map(|chunk| vec![chunk[1], chunk[2], chunk[3], chunk[0]])
+            .collect(),
+        icns::PixelFormat::RGB24 => icon
+            .pixels()
+            .chunks_exact(3)
+            .flat_map(|chunk| vec![chunk[0], chunk[1], chunk[2], 255])
+            .collect(),
+        _ => return Err("Unsupported pixel format".into()),
+    };
+
+    let img: ImageBuffer<Rgba<u8>, _> =
+        ImageBuffer::from_vec(width, height, pixels).ok_or("Failed to create image buffer")?;
+
+    // Encode to PNG
+    let mut png_data = Vec::new();
+    img.write_to(&mut Cursor::new(&mut png_data), image::ImageOutputFormat::Png)
+        .map_err(|e| e.to_string())?;
 
     Ok(Some(base64::engine::general_purpose::STANDARD.encode(png_data)))
 }
