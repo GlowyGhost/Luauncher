@@ -262,20 +262,29 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
     //      ^^^^^^^ Still camelCase... I hope you get the point now...
-    let icon_path = Path::new(&exePath)
-        .join("Contents/Resources/AppIcon.icns");
+    let icon_path = Path::new(&exe_path)
+        .join("Contents")
+        .join("Resources")
+        .join("AppIcon.icns");
 
     if !icon_path.exists() {
         return Ok(None);
     }
 
-    let icns_data = std::fs::read(icon_path).map_err(|e| e.to_string())?;
-    let reader = IconFamily::read(std::io::Cursor::new(icns_data)).map_err(|e| e.to_string())?;
+    let icns_data = std::fs::read(&icon_path).map_err(|e| e.to_string())?;
+    let reader = IconFamily::read(Cursor::new(icns_data)).map_err(|e| e.to_string())?;
 
-    let image = reader.icons()
+    let preferred_icons = [
+        IconType::ARGB32_512x512,
+        IconType::ARGB32_256x256,
+        IconType::ARGB32_128x128,
+        IconType::RGB24_128x128,
+    ];
+
+    let image = preferred_icons
         .iter()
-        .max_by_key(|icon| icon.width())
-        .ok_or("No image found in icns")?;
+        .find_map(|icon_type| reader.get_icon_with_type(*icon_type).ok())
+        .ok_or("No suitable icon found in ICNS")?;
 
     let png_data = image.encode_png().map_err(|e| e.to_string())?;
 
