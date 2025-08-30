@@ -24,7 +24,7 @@ jobs:
     name: Build Linux
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
@@ -61,7 +61,7 @@ jobs:
     name: Build Windows
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
@@ -96,7 +96,7 @@ jobs:
     name: Build macOS
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
