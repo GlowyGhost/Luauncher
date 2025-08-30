@@ -36,4 +36,5 @@ windows-icons = "0.2.1"
 winapi = { version = "0.3.1", features = ["winuser"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-icns2png = "0.1.2"
+icns = "0.3"
+image = "0.24"
