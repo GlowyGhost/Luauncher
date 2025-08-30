@@ -20,6 +20,28 @@ use std::{fs::File, io::{BufReader, Cursor}, path::Path};
 #[cfg(target_os = "macos")]
 use base64::Engine;
 
+mod lua_utils;// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+use std::collections::HashMap;
+use std::net::TcpStream;
+use std::time::Duration;
+use serde::Deserialize;
+use tauri::Manager;
+use rfd::{FileDialog, MessageDialog, MessageDialogResult};
+
+#[cfg(target_os = "windows")]
+use windows_icons::get_icon_base64_by_path;
+
+#[cfg(target_os = "macos")]
+use icns::{IconFamily, IconType, PixelFormat};
+#[cfg(target_os = "macos")]
+use image::{ImageBuffer, Rgba};
+#[cfg(target_os = "macos")]
+use std::{fs::File, io::{BufReader, Cursor}, path::Path};
+#[cfg(target_os = "macos")]
+use base64::Engine;
+
 mod lua_utils;
 mod files;
 
@@ -272,16 +294,18 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
+    // Read the ICNS file
     let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
     let icon_family = IconFamily::read(file).map_err(|e| e.to_string())?;
 
+    // Preferred icon types, largest first
     let preferred_icons = [
-        IconType::ARGB32_512x512,
-        IconType::ARGB32_256x256,
-        IconType::ARGB32_128x128,
-        IconType::RGB24_128x128,
+        IconType::RGBA32_512x512,
+        IconType::RGBA32_256x256,
+        IconType::RGBA32_128x128,
     ];
 
+    // Find the first available icon
     let icon = preferred_icons
         .iter()
         .find_map(|&icon_type| icon_family.get_icon_with_type(icon_type).ok())
@@ -290,16 +314,12 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let width = icon.width();
     let height = icon.height();
 
+    // Convert pixels: RGBA32 -> image::Rgba<u8>
     let pixels: Vec<u8> = match icon.pixel_format() {
-        icns::PixelFormat::ARGB32 => icon
+        PixelFormat::RGBA32 => icon
             .pixels()
             .chunks_exact(4)
-            .flat_map(|chunk| vec![chunk[1], chunk[2], chunk[3], chunk[0]])
-            .collect(),
-        icns::PixelFormat::RGB24 => icon
-            .pixels()
-            .chunks_exact(3)
-            .flat_map(|chunk| vec![chunk[0], chunk[1], chunk[2], 255])
+            .flat_map(|chunk| vec![chunk[0], chunk[1], chunk[2], chunk[3]])
             .collect(),
         _ => return Err("Unsupported pixel format".into()),
     };
@@ -307,6 +327,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let img: ImageBuffer<Rgba<u8>, _> =
         ImageBuffer::from_vec(width, height, pixels).ok_or("Failed to create image buffer")?;
 
+    // Encode to PNG
     let mut png_data = Vec::new();
     img.write_to(&mut Cursor::new(&mut png_data), image::ImageOutputFormat::Png)
         .map_err(|e| e.to_string())?;
