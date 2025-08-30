@@ -9,5 +9,3 @@ while attempts <= 10 do -- Loops until this ran 10 times
 
     attempts = attempts + 1 -- Increases attempts by 1
 end
-
-closeLauncherWindow(0) -- Closes Luauncher
