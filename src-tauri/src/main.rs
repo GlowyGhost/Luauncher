@@ -263,9 +263,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
     //      ^^^^^^^ Still camelCase... I hope you get the point now...
     let icon_path = Path::new(&exePath)
-        .join("Contents")
-        .join("Resources")
-        .join("AppIcon.icns");
+        .join("Contents/Resources/AppIcon.icns");
 
     if !icon_path.exists() {
         return Ok(None);
@@ -273,7 +271,12 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 
     let icns_data = std::fs::read(icon_path).map_err(|e| e.to_string())?;
     let reader = IconFamily::read(std::io::Cursor::new(icns_data)).map_err(|e| e.to_string())?;
-    let image = reader.get_best_icon().ok_or("No image found in icns")?;
+
+    let image = reader.icons()
+        .iter()
+        .max_by_key(|icon| icon.width())
+        .ok_or("No image found in icns")?;
+
     let png_data = image.encode_png().map_err(|e| e.to_string())?;
 
     Ok(Some(base64::engine::general_purpose::STANDARD.encode(png_data)))
