@@ -7,5 +7,3 @@ sleep(2000) -- Let the user see the calculator for 2 seconds
 closeApp("calc.exe") -- Closes the app
 
 waitUntilAppClose("calc.exe") -- Waits for the app to close
-
-closeLauncherWindow(0) -- Closes luauncher
