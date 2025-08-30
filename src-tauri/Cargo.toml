@@ -1,8 +1,8 @@
 [package]
 name = "launcher"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.1.0"
+description = "A Lua Launcher"
+authors = ["GlowyGhost"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -29,3 +29,6 @@ directories = "5.0"
 tokio = { version = "1", features = ["full"] }
 winapi = { version = "0.3.1", features = ["winuser"] }
 rfd = "0.15.4"
+uuid = { version = "1", features = ["v4"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+open = "5"
