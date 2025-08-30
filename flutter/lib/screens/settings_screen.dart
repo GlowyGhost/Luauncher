@@ -50,12 +50,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _update() async {
+
     String res = await tauriInvoke('update');
 
     if (res == "Undid") {
-      showBar("Cancelled Update");
+      showBar("Cancelled Update.");
     } else if (res == "No Update") {
       showBar("There currently is no new availiable update.");
+    } else if (res == "No Internet") {
+      showBar("No Internet Connection.");
     }
   }
 
@@ -144,6 +147,7 @@ class Settings extends ChangeNotifier {
 	bool isDarkMode = true;
 	bool isDevMode = false;
 	bool closeAfterOpen = true;
+  String version = "Unknown";
 	Map<String, String> gamePaths = {};
 
 	Future<void> loadSettings() async {
@@ -156,7 +160,14 @@ class Settings extends ChangeNotifier {
 		gamePaths = settings["games"];
 
 		oldDarkMode = settings["dark"];
+
+    getVersion();
 	}
+
+  Future<void> getVersion() async {
+    final version = await tauriInvoke('get_version');
+    settings.version = version;
+  }
 
 	Future<String> saveSettings() async {
 		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen, "games": gamePaths});
