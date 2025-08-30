@@ -115,7 +115,7 @@ fn close_luauncher(path: String) -> Result<(), Box<dyn std::error::Error>> {
             .arg(&path)
             .status();
 
-        res = status.success();
+        res = status?.success();
     }
 
     if res {
