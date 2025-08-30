@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'screens/library_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/output_screen.dart';
+import 'tauri_invoke.dart';
 
 enum LauncherPage { library, settings, output }
 
@@ -35,15 +37,48 @@ class _LauncherWindowState extends State<LauncherWindow> {
                   : Color(0xFFA1A1A1),
 								borderRadius: BorderRadius.circular(12),
 							),
-							child: Column(
-								crossAxisAlignment: CrossAxisAlignment.stretch,
-								children: [
-								const SizedBox(height: 60),
-									_buildNavButton('Library', LauncherPage.library),
-									_buildNavButton('Settings', LauncherPage.settings),
-									_buildNavButton('Output', LauncherPage.output),
-								],
-							),
+							child: Scaffold(
+                backgroundColor: Colors.transparent,
+                body: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 60),
+                    _buildNavButton('Library', LauncherPage.library),
+                    _buildNavButton('Settings', LauncherPage.settings),
+                    _buildNavButton('Output', LauncherPage.output),
+                  ],
+                ),
+
+                bottomNavigationBar: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Version: ${settings.version}",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: settings.oldDarkMode
+                          ? Color(0xFFFFFFFF)
+                          : Colors.black
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(FontAwesomeIcons.github, color: settings.oldDarkMode
+                            ? Color(0xFFFFFFFF)
+                            : Colors.black
+                          ),
+                          onPressed: () async {
+                            await tauriInvoke("open_link", {"url": "https://github.com/GlowyGhost/Luauncher"});
+                          },
+                        )
+                      ],
+                    )
+                  ],
+                ),
+              )
 						),
 					),
 
