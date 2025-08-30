@@ -6,16 +6,15 @@ use std::net::TcpStream;
 use std::time::Duration;
 use serde::Deserialize;
 use tauri::Manager;
-
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
+
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
+
 #[cfg(target_os = "macos")]
-use std::{path::Path, io::Cursor};
+use std::{path::Path, fs};
 #[cfg(target_os = "macos")]
-use icns::{IconFamily, IconType};
-#[cfg(target_os = "macos")]
-use base64::Engine;
+use icns2png::convert_icns_file_to_png;
 
 mod lua_utils;
 mod files;
@@ -263,30 +262,13 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
     //      ^^^^^^^ Still camelCase... I hope you get the point now...
     let icon_path = Path::new(&exePath)
-        .join("Contents")
-        .join("Resources")
-        .join("AppIcon.icns");
+        .join("Contents/Resources/AppIcon.icns");
 
     if !icon_path.exists() {
         return Ok(None);
     }
 
-    let icns_data = std::fs::read(&icon_path).map_err(|e| e.to_string())?;
-    let reader = IconFamily::read(Cursor::new(icns_data)).map_err(|e| e.to_string())?;
-
-    let preferred_icons = [
-        IconType::RGBA32_512x512,
-        IconType::RGBA32_256x256,
-        IconType::RGBA32_128x128,
-        IconType::RGB24_128x128,
-    ];
-
-    let image = preferred_icons
-        .iter()
-        .find_map(|icon_type| reader.get_icon_with_type(*icon_type).ok())
-        .ok_or("No suitable icon found in ICNS")?;
-
-    let png_data = image.encode_png().map_err(|e| e.to_string())?;
+    let png_data = convert_icns_file_to_png(&icon_path).map_err(|e| e.to_string())?;
 
     Ok(Some(base64::engine::general_purpose::STANDARD.encode(png_data)))
 }
