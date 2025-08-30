@@ -112,9 +112,14 @@ jobs:
           fi
 
       - name: Build Tauri app
+        shell: bash
         run: |
           cd src-tauri
-          cargo build --release
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            cargo build --release --target x86_64-apple-darwin
+          else
+            cargo build --release
+          fi
 
       - name: Package Release Zip
         run: |
