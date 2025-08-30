@@ -121,7 +121,7 @@ fn force_close_app(_lua: &Lua, process_name: String) -> mlua::Result<()> {
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         Command::new("pkill")
-            .arg("-9", &process_name)
+            .args(["-9", &process_name])
             .output()
             .map_err(mlua::Error::external)?;
     }
