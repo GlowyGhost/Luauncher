@@ -32,5 +32,8 @@ reqwest = { version = "0.12", features = ["blocking", "json"] }
 open = "5"
 
 [target.'cfg(windows)'.dependencies]
-windows-icons = { version = "0.2.1", optional = true }
-winapi = { version = "0.3.1", optional = true, features = ["winuser"] }
+windows-icons = "0.2.1"
+winapi = { version = "0.3.1", features = ["winuser"] }
+
+[target.'cfg(macos)'.dependencies]
+icns = "1.1"
