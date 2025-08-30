@@ -275,9 +275,9 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let reader = IconFamily::read(Cursor::new(icns_data)).map_err(|e| e.to_string())?;
 
     let preferred_icons = [
-        IconType::ARGB32_512x512,
-        IconType::ARGB32_256x256,
-        IconType::ARGB32_128x128,
+        IconType::RGBA32_512x512,
+        IconType::RGBA32_256x256,
+        IconType::RGBA32_128x128,
         IconType::RGB24_128x128,
     ];
 
