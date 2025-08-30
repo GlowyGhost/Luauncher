@@ -1,17 +1,20 @@
-name: Build and Release
+name: Build Tauri App
 
 on:
   workflow_dispatch:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
 
 jobs:
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
+  flutter:
+    name: Build Flutter Web
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Install Flutter
@@ -20,100 +23,100 @@ jobs:
           flutter-version: "3.35.2"
           channel: "stable"
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
-      - name: Build Flutter app
-        run: flutter build windows --release
-
-      - name: Build updater
-        run: cargo build --release
-        working-directory: updater
-
-      - name: Package app
+      - name: Build Flutter web
         run: |
-          mkdir windows
-          copy LICENSE windows
-          copy updater\target\release\updater.exe windows
-          copy build\windows\x64\runner\Release\* windows
+          cd flutter
+          flutter build web --release
 
-      - name: Upload artifact
+      - name: Upload Flutter build
         uses: actions/upload-artifact@v4
         with:
-          name: windows.zip
-          path: windows/*
+          name: flutter-build-${{ matrix.os }}
+          path: flutter/build/web
 
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
+  updater:
+    name: Build Updater
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          flutter-version: "3.35.2"
-          channel: "stable"
-
-      - name: Flutter doctor
-        run: flutter doctor -v
-
-      - name: Build Flutter app
-        run: flutter build linux --release
+          toolchain: stable
 
       - name: Build updater
-        run: cargo build --release
-        working-directory: updater
-
-      - name: Package app
         run: |
-          mkdir linux
-          cp LICENSE linux
-          cp updater/target/release/updater linux/
-          cp -r build/linux/x64/release/bundle/* linux/
+          cd src-tauri/updater
+          cargo build --release
 
-      - name: Upload artifact
+      - name: Upload updater
         uses: actions/upload-artifact@v4
         with:
-          name: linux.zip
-          path: linux/*
+          name: updater-${{ matrix.os }}
+          path: src-tauri/updater/target/release/*
 
-  build-macos:
-    name: Build macOS
-    runs-on: macos-latest
+  app:
+    name: Build Tauri App
+    runs-on: ${{ matrix.os }}
+    needs: [flutter, updater]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          flutter-version: "3.35.2"
-          channel: "stable"
+          toolchain: stable
 
-      - name: Flutter doctor
-        run: flutter doctor -v
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-      - name: Build Flutter app
-        run: flutter build macos --release
+      - name: Download Flutter build
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-build-${{ matrix.os }}
+          path: flutter/build/web
 
-      - name: Build updater
-        run: cargo build --release
-        working-directory: updater
+      - name: Download Updater
+        uses: actions/download-artifact@v4
+        with:
+          name: updater-${{ matrix.os }}
+          path: src-tauri/updater/target/release
 
-      - name: Package app
+      - name: Install frontend deps
         run: |
-          mkdir macos
-          cp LICENSE macos
-          cp updater/target/release/updater macos/
-          cp -r build/macos/Build/Products/Release/* macos/
+          cd src-tauri
+          npm install
 
-      - name: Upload artifact
+      - name: Build Tauri app
+        run: |
+          cd src-tauri
+          cargo build --release
+
+      - name: Package Release Zip
+        run: |
+          cd src-tauri/target/release
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            zip -r linux.zip launcher ../../LICENSE
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            zip -r macos.zip launcher ../../LICENSE
+          else
+            powershell Compress-Archive -Path launcher.exe,../../LICENSE -DestinationPath windows.zip -Force
+          fi
+
+      - name: Upload final zip
         uses: actions/upload-artifact@v4
         with:
-          name: macos.zip
-          path: macos/*
+          name: release-${{ matrix.os }}
+          path: src-tauri/target/release/*.zip
