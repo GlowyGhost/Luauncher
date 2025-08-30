@@ -1,204 +1,122 @@
-name: Build & Release Luauncher
+name: Build Tauri App
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - "v*"
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
+  flutter:
+    name: Build Flutter Web
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
-      - id: get_version
-        run: |
-          echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
-
-# ---------------------- Linux Build ----------------------
-  build-linux:
-    needs: setup
-    runs-on: ubuntu-latest
-    name: Build Linux
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Linux Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev zip
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Install Flutter
-        run: |
-          if [ ! -d "flutter" ]; then
-            git clone https://github.com/flutter/flutter.git -b stable --depth 1
-          fi
-          echo "${PWD}/flutter/bin" >> $GITHUB_PATH
-          flutter --version
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.0"
+          channel: "stable"
 
-      - name: Build Flutter Web
+      - name: Build Flutter web
         run: |
-          echo "::group::Flutter Web Build"
           cd flutter
-          flutter build web --release --verbose
-          echo "::endgroup::"
+          flutter build web --release
 
-      - name: Build Updater
-        run: |
-          echo "::group::Updater Build"
-          cd src-tauri/updater
-          cargo build --release --verbose
-          cd ../..
-          echo "::endgroup::"
-
-      - name: Build Tauri App
-        run: |
-          echo "::group::Tauri App Build"
-          cd src-tauri
-          cargo build --release --verbose
-          echo "::endgroup::"
-
-      - name: Zip Linux Build with License
-        run: |
-          cp ../../LICENSE src-tauri/target/release/bundle/
-          cd src-tauri/target/release/bundle
-          zip -r ../../../../linux.zip *
-
-      - name: Upload Linux Artifact
+      - name: Upload Flutter build
         uses: actions/upload-artifact@v4
         with:
-          name: linux-${{ needs.setup.outputs.version }}
-          path: linux.zip
+          name: flutter-build-${{ matrix.os }}
+          path: flutter/build/web
 
-# ---------------------- Windows Build ----------------------
-  build-windows:
-    needs: setup
-    runs-on: windows-latest
-    name: Build Windows
+  updater:
+    name: Build Updater
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Build updater
+        run: |
+          cd src-tauri/updater
+          cargo build --release
+
+      - name: Upload updater
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-${{ matrix.os }}
+          path: src-tauri/updater/target/release/*
+
+  app:
+    name: Build Tauri App
+    runs-on: ${{ matrix.os }}
+    needs: [flutter, updater]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
-      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Flutter
-        run: |
-          if (!(Test-Path "flutter")) {
-              git clone https://github.com/flutter/flutter.git -b stable --depth 1
-          }
-          $env:PATH = "$PWD\flutter\bin;$env:PATH"
-          flutter --version
-
-      - name: Build Flutter Web
-        run: |
-          echo "::group::Flutter Web Build"
-          cd flutter
-          flutter build web --release --verbose
-          echo "::endgroup::"
-
-      - name: Build Updater
-        run: |
-          echo "::group::Updater Build"
-          cd src-tauri/updater
-          cargo build --release --verbose
-          cd ../..
-          echo "::endgroup::"
-
-      - name: Build Tauri App
-        run: |
-          echo "::group::Tauri App Build"
-          cd src-tauri
-          cargo build --release --verbose
-          echo "::endgroup::"
-
-      - name: Zip Windows Build with License
-        run: |
-          if (!(Test-Path "src-tauri\target\release\bundle")) { Write-Error "Bundle folder not found!" }
-          copy LICENSE src-tauri\target\release\bundle\
-          cd src-tauri\target\release\bundle
-          powershell Compress-Archive -Path * -DestinationPath ../../../../windows.zip
-
-      - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-${{ needs.setup.outputs.version }}
-          path: windows.zip
-
-# ---------------------- macOS Build ----------------------
-  build-macos:
-    needs: setup
-    runs-on: macos-latest
-    name: Build macOS
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Flutter
-        run: |
-          brew update
-          brew install flutter zip
-
-      - name: Build Flutter Web
-        run: |
-          echo "::group::Flutter Web Build"
-          cd flutter
-          flutter build web --release --verbose
-          echo "::endgroup::"
-
-      - name: Build Updater
-        run: |
-          echo "::group::Updater Build"
-          cd src-tauri/updater
-          cargo build --release --verbose
-          cd ../..
-          echo "::endgroup::"
-
-      - name: Build Tauri App
-        run: |
-          echo "::group::Tauri App Build"
-          cd src-tauri
-          cargo build --release --verbose --no-default-features
-          echo "::endgroup::"
-
-      - name: Zip macOS Build with License
-        run: |
-          cp ../../LICENSE src-tauri/target/release/bundle/
-          cd src-tauri/target/release/bundle
-          zip -r ../../../../macos.zip *
-
-      - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ needs.setup.outputs.version }}
-          path: macos.zip
-
-# ---------------------- Release ----------------------
-  release:
-    needs: [build-linux, build-windows, build-macos]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v3
-      - name: Download Artifacts
+      - name: Download Flutter build
         uses: actions/download-artifact@v4
         with:
-          path: release-artifacts
-      - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
+          name: flutter-build-${{ matrix.os }}
+          path: flutter/build/web
+
+      - name: Download Updater
+        uses: actions/download-artifact@v4
         with:
-          tag: ${{ github.ref }}
-          name: Release ${{ needs.setup.outputs.version }}
-          artifacts: |
-            release-artifacts/linux-${{ needs.setup.outputs.version }}/linux.zip
-            release-artifacts/windows-${{ needs.setup.outputs.version }}/windows.zip
-            release-artifacts/macos-${{ needs.setup.outputs.version }}/macos.zip
+          name: updater-${{ matrix.os }}
+          path: src-tauri/updater/target/release
+
+      - name: Install frontend deps
+        run: |
+          cd src-tauri
+          npm install
+
+      - name: Build Tauri app
+        run: |
+          cd src-tauri
+          cargo build --release
+
+      - name: Package Release Zip
+        run: |
+          cd src-tauri/target/release
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            zip -r linux.zip launcher ../LICENSE
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            zip -r macos.zip launcher ../LICENSE
+          else
+            powershell Compress-Archive -Path launcher.exe,../../LICENSE -DestinationPath windows.zip -Force
+          fi
+
+      - name: Upload final zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: src-tauri/target/release/*.zip
