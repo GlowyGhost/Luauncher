@@ -6,13 +6,13 @@ use std::{env, fs, io::Write, process::Command};
 use uuid::Uuid;
 
 #[cfg(target_os = "windows")]
-const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater.exe");
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/release/updater.exe");
 
 #[cfg(target_os = "linux")]
-const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater");
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/release/updater");
 
 #[cfg(target_os = "macos")]
-const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/debug/updater");
+const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/release/updater");
 
 pub(crate) fn get_app_base() -> Option<PathBuf> {
     BaseDirs::new().map(|dirs| dirs.config_dir().join("Luauncher"))
@@ -146,9 +146,11 @@ pub(crate) fn extract_updater(arg: &str, path: PathBuf) -> Result<String, String
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&temp_path)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&temp_path, perms)?;
+        let mut perms = fs::metadata(&temp_path)
+        .map_err(|e| e.to_string())?
+        .permissions();
+
+        fs::set_permissions(&temp_path, perms).map_err(|e| e.to_string())?;
     }
 
     let _ = Command::new("cmd")
