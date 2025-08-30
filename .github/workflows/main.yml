@@ -12,7 +12,7 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: get_version
         run: |
           echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Build Linux
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
@@ -60,8 +60,8 @@ jobs:
     runs-on: windows-latest
     name: Build Windows
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
@@ -95,8 +95,8 @@ jobs:
     runs-on: macos-latest
     name: Build macOS
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
       - uses: dtolnay/rust-toolchain@stable
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
