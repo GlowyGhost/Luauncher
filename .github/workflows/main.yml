@@ -1,0 +1,133 @@
+name: Build & Release Luauncher
+
+on:
+  push:
+    tags:
+      - 'v*'   # Trigger on version tags like v1.0.0
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: get_version
+        run: |
+          echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
+
+  build-linux:
+    needs: setup
+    runs-on: ubuntu-latest
+    name: Build Linux
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Tauri dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Build Flutter Web
+        run: |
+          cd flutter
+          flutter build web --release
+      - name: Build Updater
+        run: |
+          cd src-tauri/updater
+          cargo build --release
+          cd ../..
+      - name: Build Tauri
+        run: |
+          cd src-tauri
+          cargo build --release
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-${{ needs.setup.outputs.version }}
+          path: src-tauri/target/release/bundle/
+
+  build-windows:
+    needs: setup
+    runs-on: windows-latest
+    name: Build Windows
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build Flutter Web
+        run: |
+          cd flutter
+          flutter build web --release
+      - name: Build Updater
+        run: |
+          cd src-tauri/updater
+          cargo build --release
+          cd ../..
+      - name: Build Tauri
+        run: |
+          cd src-tauri
+          cargo build --release
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-${{ needs.setup.outputs.version }}
+          path: src-tauri/target/release/bundle/
+
+  build-macos:
+    needs: setup
+    runs-on: macos-latest
+    name: Build macOS
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Flutter
+        run: |
+          brew update
+          brew install flutter
+      - name: Build Flutter Web
+        run: |
+          cd flutter
+          flutter build web --release
+      - name: Build Updater
+        run: |
+          cd src-tauri/updater
+          cargo build --release
+          cd ../..
+      - name: Build Tauri
+        run: |
+          cd src-tauri
+          cargo build --release
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-${{ needs.setup.outputs.version }}
+          path: src-tauri/target/release/bundle/
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: release-artifacts
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref }}
+          name: Release ${{ needs.setup.outputs.version }}
+          artifacts: |
+            release-artifacts/linux-${{ needs.setup.outputs.version }}/*
+            release-artifacts/windows-${{ needs.setup.outputs.version }}/*
+            release-artifacts/macos-${{ needs.setup.outputs.version }}/*
