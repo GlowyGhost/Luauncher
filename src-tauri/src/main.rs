@@ -11,9 +11,9 @@ use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
 #[cfg(target_os = "macos")]
-use std::path::Path;
+use std::{path::Path, io::Cursor};
 #[cfg(target_os = "macos")]
-use icns::IconFamily;
+use icns::{IconFamily, IconType};
 #[cfg(target_os = "macos")]
 use base64::Engine;
 
@@ -262,7 +262,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
     //      ^^^^^^^ Still camelCase... I hope you get the point now...
-    let icon_path = Path::new(&exe_path)
+    let icon_path = Path::new(&exePath)
         .join("Contents")
         .join("Resources")
         .join("AppIcon.icns");
