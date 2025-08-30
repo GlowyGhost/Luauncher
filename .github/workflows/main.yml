@@ -102,6 +102,7 @@ jobs:
           path: src-tauri/updater/target/release
 
       - name: Install frontend deps if package.json exists
+        shell: bash
         run: |
           if [ -f src-tauri/package.json ]; then
             cd src-tauri
