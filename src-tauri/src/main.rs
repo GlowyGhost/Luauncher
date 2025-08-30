@@ -6,13 +6,16 @@ use std::net::TcpStream;
 use std::time::Duration;
 use serde::Deserialize;
 use tauri::Manager;
-use base64::Engine;
 
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
 #[cfg(target_os = "macos")]
 use std::path::Path;
+#[cfg(target_os = "macos")]
+use icns::IconFamily;
+#[cfg(target_os = "macos")]
+use base64::Engine;
 
 mod lua_utils;
 mod files;
@@ -269,7 +272,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     }
 
     let icns_data = std::fs::read(icon_path).map_err(|e| e.to_string())?;
-    let reader = icns::IconFamily::read(std::io::Cursor::new(icns_data)).map_err(|e| e.to_string())?;
+    let reader = IconFamily::read(std::io::Cursor::new(icns_data)).map_err(|e| e.to_string())?;
     let image = reader.get_best_icon().ok_or("No image found in icns")?;
     let png_data = image.encode_png().map_err(|e| e.to_string())?;
 
