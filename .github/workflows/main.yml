@@ -77,11 +77,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
       - name: Download Flutter build
         uses: actions/download-artifact@v4
         with:
@@ -93,11 +88,6 @@ jobs:
         with:
           name: updater-${{ matrix.os }}
           path: src-tauri/updater/target/release
-
-      - name: Install frontend deps
-        run: |
-          cd src-tauri
-          npm install
 
       - name: Build Tauri app
         run: |
