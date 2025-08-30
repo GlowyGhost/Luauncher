@@ -12,7 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -22,6 +23,11 @@ jobs:
         with:
           flutter-version: "3.35.2"
           channel: "stable"
+
+      - name: Disable analytics & CLI animations
+        run: |
+          flutter config --no-analytics
+          flutter config --no-cli-animations
 
       - name: Build Flutter web
         run: |
@@ -39,7 +45,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -66,24 +73,11 @@ jobs:
     needs: [flutter, updater]
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libglib2.0-dev \
-            libwebkit2gtk-4.0-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            pkg-config \
-            build-essential
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -94,6 +88,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+
+      - name: Install Linux dependencies for Tauri
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev libglib2.0-dev libwebkit2gtk-4.0-dev zip
 
       - name: Download Flutter build
         uses: actions/download-artifact@v4
@@ -107,10 +107,14 @@ jobs:
           name: updater-${{ matrix.os }}
           path: src-tauri/updater/target/release
 
-      - name: Install frontend deps
+      - name: Install frontend deps if package.json exists
         run: |
-          cd src-tauri
-          npm install
+          if [ -f src-tauri/package.json ]; then
+            cd src-tauri
+            npm install
+          else
+            echo "No package.json found, skipping npm install"
+          fi
 
       - name: Build Tauri app
         run: |
