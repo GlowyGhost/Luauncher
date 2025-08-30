@@ -6,6 +6,7 @@ use std::net::TcpStream;
 use std::time::Duration;
 use serde::Deserialize;
 use tauri::Manager;
+use base64::Engine;
 
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 #[cfg(target_os = "windows")]
