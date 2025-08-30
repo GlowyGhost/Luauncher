@@ -145,10 +145,9 @@ pub(crate) fn extract_updater(arg: &str, path: PathBuf) -> Result<String, String
 
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&temp_path)
-        .map_err(|e| e.to_string())?
-        .permissions();
+        let perms = fs::metadata(&temp_path)
+            .map_err(|e| e.to_string())?
+            .permissions();
 
         fs::set_permissions(&temp_path, perms).map_err(|e| e.to_string())?;
     }
