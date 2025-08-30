@@ -272,11 +272,9 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    // Read the ICNS file
     let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
     let icon_family = IconFamily::read(file).map_err(|e| e.to_string())?;
 
-    // Preferred icon types, largest first
     let preferred_icons = [
         IconType::ARGB32_512x512,
         IconType::ARGB32_256x256,
@@ -284,7 +282,6 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
         IconType::RGB24_128x128,
     ];
 
-    // Find the first available icon
     let icon = preferred_icons
         .iter()
         .find_map(|&icon_type| icon_family.get_icon_with_type(icon_type).ok())
@@ -293,7 +290,6 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let width = icon.width();
     let height = icon.height();
 
-    // Convert pixels: ARGB -> RGBA
     let pixels: Vec<u8> = match icon.pixel_format() {
         icns::PixelFormat::ARGB32 => icon
             .pixels()
@@ -311,7 +307,6 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let img: ImageBuffer<Rgba<u8>, _> =
         ImageBuffer::from_vec(width, height, pixels).ok_or("Failed to create image buffer")?;
 
-    // Encode to PNG
     let mut png_data = Vec::new();
     img.write_to(&mut Cursor::new(&mut png_data), image::ImageOutputFormat::Png)
         .map_err(|e| e.to_string())?;
