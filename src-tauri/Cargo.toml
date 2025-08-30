@@ -23,11 +23,13 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.21"
-windows-icons = "0.2.1"
+[target.'cfg(windows)'.dependencies]
+windows-icons = { version = "0.2.1", optional = true }
 mlua = { version = "0.10", features = ["lua54", "vendored", "async", "send"] }
 directories = "5.0"
 tokio = { version = "1", features = ["full"] }
-winapi = { version = "0.3.1", features = ["winuser"] }
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.1", optional = true, features = ["winuser"] }
 rfd = "0.15.4"
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", features = ["blocking", "json"] }
