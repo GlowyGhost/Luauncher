@@ -31,21 +31,26 @@ jobs:
       - name: Update packages
         run: sudo apt-get update
       - name: Install Linux dependencies
-        run: |
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev zip
+        run: sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev zip
       - name: Build Flutter Web
         run: |
+          echo "::group::Flutter Web Build"
           cd flutter
           flutter build web --release --verbose
+          echo "::endgroup::"
       - name: Build Updater
         run: |
+          echo "::group::Updater Build"
           cd src-tauri/updater
           cargo build --release --verbose
           cd ../..
-      - name: Build Tauri
+          echo "::endgroup::"
+      - name: Build Tauri App
         run: |
+          echo "::group::Tauri App Build"
           cd src-tauri
           cargo build --release --verbose
+          echo "::endgroup::"
       - name: Zip Linux Build with License
         run: |
           cp ../../LICENSE src-tauri/target/release/bundle/
@@ -70,17 +75,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build Flutter Web
         run: |
+          echo "::group::Flutter Web Build"
           cd flutter
           flutter build web --release --verbose
+          echo "::endgroup::"
       - name: Build Updater
         run: |
+          echo "::group::Updater Build"
           cd src-tauri/updater
           cargo build --release --verbose
           cd ../..
-      - name: Build Tauri
+          echo "::endgroup::"
+      - name: Build Tauri App
         run: |
+          echo "::group::Tauri App Build"
           cd src-tauri
           cargo build --release --verbose
+          echo "::endgroup::"
       - name: Zip Windows Build with License
         run: |
           if (!(Test-Path "src-tauri\target\release\bundle")) { Write-Error "Bundle folder not found!" }
@@ -110,17 +121,23 @@ jobs:
           brew install flutter zip
       - name: Build Flutter Web
         run: |
+          echo "::group::Flutter Web Build"
           cd flutter
           flutter build web --release --verbose
+          echo "::endgroup::"
       - name: Build Updater
         run: |
+          echo "::group::Updater Build"
           cd src-tauri/updater
           cargo build --release --verbose
           cd ../..
-      - name: Build Tauri
+          echo "::endgroup::"
+      - name: Build Tauri App
         run: |
+          echo "::group::Tauri App Build"
           cd src-tauri
           cargo build --release --verbose
+          echo "::endgroup::"
       - name: Zip macOS Build with License
         run: |
           cp ../../LICENSE src-tauri/target/release/bundle/
