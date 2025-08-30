@@ -9,6 +9,9 @@ Everything for Flutter side of things is in the flutter sub-directory. All the f
 ### Tauri
 All the files on the Tauri side will be in src-tauri sub-directory. src has the rust files that you should be editing. In the root of the project run `cargo tauri dev` (Use this for hot-reload) or in src-tauri run `cargo run` (For most use-cases, this is better), this will install and build Tauri dependencies in the project before building the actual project. After building it will run the app for you. This will be located in src-tauri/target.
 
+### Updater/Uninstaller
+The Updater/Uninstaller is located at `src-tauri/updater`. Always build this as release (`cargo run -r` in the updater folder) unless debugging. If you are debugging then you will need to temporarily change the `EMBEDDED_BIN` arg in `files.rs` to point to the new binary.
+
 ## Help
 ### Flutter showing an old version
 This is most likely for tauri using an outdated cache. You can check by going into `flutter/build/web` and running `python -m http.server`. This will make a local host at `http://localhost:8000`. If this is showing what the code should show, go to `C:/Users/<YourUser>/AppData/Local/com.glowy.luauncher` and delete it. If it's still not working check index.html and see if contains `<base href="./">`, if it's not, replace the current `base href` with that. If it STILL doesn't work, I have no clue what it can be. If the localhost isn't showing what you expect, check if your code is saved correctly outside of your IDE (in Notepad or a similar text-editor).
