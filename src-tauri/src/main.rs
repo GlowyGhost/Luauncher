@@ -2,16 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
+use std::net::TcpStream;
+use std::time::Duration;
+use serde::Deserialize;
+use tauri::Manager;
 
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
 #[cfg(target_os = "windows")]
 use windows_icons::get_icon_base64_by_path;
 #[cfg(target_os = "macos")]
 use std::path::Path;
-
-use tauri::Manager;
-
-use serde::Deserialize;
 
 mod lua_utils;
 mod files;
@@ -170,19 +170,6 @@ fn save_log(log: String) -> Result<String, String> {
     }
 }
 
-#[cfg(target_os = "windows")]
-#[tauri::command]
-fn get_icon(exePath: String) -> Result<Option<String>, String> {
-    //      ^^^^^^^ Still camelCase...
-    match get_icon_base64_by_path(&exePath) {
-        Ok(base64str) => Ok(Some(base64str)),
-        Err(e) => {
-            eprintln!("Icon extraction failed: {}", e);
-            Ok(None)
-        }
-    }
-}
-
 #[tauri::command]
 fn uninstall() -> Result<String, String> {
     let res = MessageDialog::new()
@@ -204,6 +191,15 @@ struct Release {
 
 #[tauri::command]
 async fn update() -> Result<String, String> {
+    let connected = TcpStream::connect_timeout(
+        &("1.1.1.1:80".parse().unwrap()),
+        Duration::from_secs(2)
+    ).is_ok();
+
+    if connected == false {
+        return Ok("No Internet".to_string());
+    }
+
     let url = "https://api.github.com/repos/GlowyGhost/Luauncher/releases/latest";
 
     let client = reqwest::Client::new();
@@ -233,6 +229,29 @@ async fn update() -> Result<String, String> {
         return files::extract_updater("update", std::env::current_exe().unwrap());
     }
     Ok("Undid".to_string())
+}
+
+#[tauri::command]
+fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    open::that(url).map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn get_icon(exePath: String) -> Result<Option<String>, String> {
+    //      ^^^^^^^ Still camelCase...
+    match get_icon_base64_by_path(&exePath) {
+        Ok(base64str) => Ok(Some(base64str)),
+        Err(e) => {
+            eprintln!("Icon extraction failed: {}", e);
+            Ok(None)
+        }
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -293,7 +312,7 @@ async fn main() {
 
             Ok(())})
         .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app,
-            get_icon, get_game_path, make_plugin, save_game, delete_game, save_log, uninstall, update])
+            get_icon, get_game_path, make_plugin, save_game, delete_game, save_log, uninstall, update, get_version, open_link])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
