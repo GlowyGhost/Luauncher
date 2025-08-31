@@ -120,7 +120,8 @@ jobs:
         run: |
           cd src-tauri
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            cargo build --release --target x86_64-apple-darwin
+            npm install -g @tauri-apps/cli
+            tauri build
           else
             cargo build --release
           fi
