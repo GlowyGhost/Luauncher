@@ -1,31 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::collections::HashMap;
-use std::net::TcpStream;
-use std::time::Duration;
-use serde::Deserialize;
-use tauri::Manager;
-use rfd::{FileDialog, MessageDialog, MessageDialogResult};
-
-#[cfg(target_os = "windows")]
-use windows_icons::get_icon_base64_by_path;
-
-#[cfg(target_os = "macos")]
-use icns::{IconFamily, IconType};
-#[cfg(target_os = "macos")]
-use image::{ImageBuffer, Rgba};
-#[cfg(target_os = "macos")]
-use std::{fs::File, io::{BufReader, Cursor}, path::Path};
-#[cfg(target_os = "macos")]
-use base64::Engine;
-
-mod lua_utils;// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use std::collections::HashMap;
-use std::net::TcpStream;
-use std::time::Duration;
+use std::{collections::HashMap, net::TcpStream, time::Duration};
 use serde::Deserialize;
 use tauri::Manager;
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
@@ -35,12 +11,15 @@ use windows_icons::get_icon_base64_by_path;
 
 #[cfg(target_os = "macos")]
 use icns::{IconFamily, IconType, PixelFormat};
+
 #[cfg(target_os = "macos")]
-use image::{ImageBuffer, Rgba};
+use image::{ImageBuffer, Rgba, DynamicImage, ImageOutputFormat};
+
 #[cfg(target_os = "macos")]
-use std::{fs::File, io::{BufReader, Cursor}, path::Path};
+use std::{fs::File, io::BufReader, io::Cursor, path::Path};
+
 #[cfg(target_os = "macos")]
-use base64::Engine;
+use base64::encode as base64_encode;
 
 mod lua_utils;
 mod files;
@@ -141,7 +120,7 @@ fn save_game(mut path: String, name: String, oldn: String) -> Result<String, Str
     let _ = files::save_script(&name, &content);
 
     let _ = files::save_settings(&settings);
-    
+
     Ok("Saved Game".to_string())
 }
 
@@ -286,53 +265,88 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
 #[cfg(target_os = "macos")]
 #[tauri::command]
 fn get_icon(exePath: String) -> Result<Option<String>, String> {
-    //      ^^^^^^^ Still camelCase... I hope you get the point now...
-    let icon_path = Path::new(&exePath)
-        .join("Contents/Resources/AppIcon.icns");
-
+    let icon_path = Path::new(&exePath).join("Contents/Resources/AppIcon.icns");
     if !icon_path.exists() {
         return Ok(None);
     }
 
     // Read the ICNS file
     let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
-    let icon_family = IconFamily::read(file).map_err(|e| e.to_string())?;
+    let family = IconFamily::read(file).map_err(|e| e.to_string())?;
 
-    // Preferred icon types, largest first
-    let preferred_icons = [
-        IconType::RGBA32_512x512,
-        IconType::RGBA32_256x256,
-        IconType::RGBA32_128x128,
-    ];
-
-    // Find the first available icon
-    let icon = preferred_icons
+    // Pick the largest available icon type (same approach as icns example)
+    let &best_type = family
+        .available_icons()
         .iter()
-        .find_map(|&icon_type| icon_family.get_icon_with_type(icon_type).ok())
-        .ok_or("No suitable icon found in ICNS")?;
+        .max_by_key(|t| t.pixel_width() * t.pixel_height())
+        .ok_or("ICNS file contains no icons")?;
 
-    let width = icon.width();
-    let height = icon.height();
-
-    // Convert pixels: RGBA32 -> image::Rgba<u8>
-    let pixels: Vec<u8> = match icon.pixel_format() {
-        PixelFormat::RGBA32 => icon
-            .pixels()
-            .chunks_exact(4)
-            .flat_map(|chunk| vec![chunk[0], chunk[1], chunk[2], chunk[3]])
-            .collect(),
-        _ => return Err("Unsupported pixel format".into()),
-    };
-
-    let img: ImageBuffer<Rgba<u8>, _> =
-        ImageBuffer::from_vec(width, height, pixels).ok_or("Failed to create image buffer")?;
-
-    // Encode to PNG
-    let mut png_data = Vec::new();
-    img.write_to(&mut Cursor::new(&mut png_data), image::ImageOutputFormat::Png)
+    let image = family
+        .get_icon_with_type(best_type)
         .map_err(|e| e.to_string())?;
 
-    Ok(Some(base64::engine::general_purpose::STANDARD.encode(png_data)))
+    let width = image.width() as u32;
+    let height = image.height() as u32;
+    let data = image.data();
+
+    // Convert icns::Image data -> RGBA u8 vector expected by image crate
+    let rgba_bytes: Vec<u8> = match image.pixel_format() {
+        PixelFormat::RGBA => {
+            // data is already R, G, B, A per docs
+            data.to_vec()
+        }
+        PixelFormat::RGB => {
+            // expand R,G,B -> R,G,B,255
+            let mut out = Vec::with_capacity((width * height * 4) as usize);
+            for chunk in data.chunks_exact(3) {
+                out.push(chunk[0]); // R
+                out.push(chunk[1]); // G
+                out.push(chunk[2]); // B
+                out.push(255);      // A
+            }
+            out
+        }
+        PixelFormat::GrayAlpha => {
+            // Gray,Alpha per-pixel (2 bytes) -> R=G=B=gray, A=alpha
+            let mut out = Vec::with_capacity((width * height * 4) as usize);
+            for chunk in data.chunks_exact(2) {
+                let gray = chunk[0];
+                let alpha = chunk[1];
+                out.push(gray);
+                out.push(gray);
+                out.push(gray);
+                out.push(alpha);
+            }
+            out
+        }
+        PixelFormat::Gray => {
+            // Gray only -> R=G=B=gray, A=255
+            let mut out = Vec::with_capacity((width * height * 4) as usize);
+            for &g in data.iter() {
+                out.push(g);
+                out.push(g);
+                out.push(g);
+                out.push(255);
+            }
+            out
+        }
+        PixelFormat::Alpha => {
+            // alpha-only doesn't contain color info — can't produce sensible RGB
+            return Err("ICNS image contains alpha mask only; unsupported".into());
+        }
+    };
+
+    // Build an ImageBuffer and write PNG to memory
+    let img_buf: ImageBuffer<Rgba<u8>, _> =
+        ImageBuffer::from_vec(width, height, rgba_bytes).ok_or("image buffer size mismatch")?;
+    let dyn_img = DynamicImage::ImageRgba8(img_buf);
+
+    let mut png_data = Vec::new();
+    dyn_img
+        .write_to(&mut Cursor::new(&mut png_data), ImageOutputFormat::Png)
+        .map_err(|e| e.to_string())?;
+
+    Ok(Some(base64_encode(&png_data)))
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
