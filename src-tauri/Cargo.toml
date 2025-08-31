@@ -1,11 +1,15 @@
 [package]
-name = "launcher"
+name = "luauncher"
 version = "1.1.0"
 description = "A Lua Launcher"
 authors = ["GlowyGhost"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "Luauncher"
+path = "src/main.rs"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
