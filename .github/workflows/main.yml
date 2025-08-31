@@ -126,6 +126,7 @@ jobs:
           fi
 
       - name: Package Release Zip
+        shell: bash
         run: |
           cd src-tauri/target/release
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
