@@ -25,7 +25,7 @@ Luauncher has lua built in via [mlua](https://github.com/mlua-rs/mlua). There ar
 sleep() --Sleeps for the duration in milliseconds.
 openApp() --Opens the app name sent in by the function.
 closeApp() --Closes the app name sent in by the function.
-forceCloseApp() --Closes the app name sent in by the function.
+forceCloseApp() --Forces the app name sent in by the function.
 isAppOpen() --Returns a bool if the app name sent in is open.
 isWindowOpen() --Returns a bool if the window name is open.
 openURL() --Opens the URL.
