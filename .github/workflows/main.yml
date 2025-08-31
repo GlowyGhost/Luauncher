@@ -126,16 +126,26 @@ jobs:
             cargo build --release
           fi
 
-      - name: Package Release Zip
+      - name: Package Release Zip (Mac)
+        if: matrix.os == 'macos-latest'
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            cd src-tauri/target/release
-            zip -j linux.zip launcher ../../../LICENSE
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            cd src-tauri/target/release/bundle/macos
-            zip -r macos.zip Luauncher.app ../../../../LICENSE
-          fi
+          cd src-tauri/target/release/bundle/macos
+          zip -ry macos.zip Luauncher.app ../../../../LICENSE
+
+      - name: Package Release Zip (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          cd src-tauri/target/release
+          zip -j linux.zip Luauncher ../../../LICENSE
+
+      - name: Package Release Zip (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd src-tauri/target/release
+          Compress-Archive -Path Luauncher.exe,../../../LICENSE -DestinationPath windows.zip -Force
 
       - name: Package Release Zip (Windows)
         if: matrix.os == 'windows-latest'
