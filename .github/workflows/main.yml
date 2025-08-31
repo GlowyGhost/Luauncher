@@ -129,11 +129,13 @@ jobs:
         run: |
           cd src-tauri/target/release
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            zip -r linux.zip launcher ../LICENSE
+            zip -j linux.zip launcher ../../../LICENSE   # <- go back 3 dirs
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            zip -r macos.zip launcher ../LICENSE
+            zip -j macos.zip launcher ../../../LICENSE   # <- same here
           else
-            powershell Compress-Archive -Path launcher.exe,../../LICENSE -DestinationPath windows.zip -Force
+            powershell Compress-Archive `
+              -Path launcher.exe,../../../LICENSE `       # <- fix path for Windows
+              -DestinationPath windows.zip -Force
           fi
 
       - name: Upload final zip
