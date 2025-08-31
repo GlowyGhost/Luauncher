@@ -132,6 +132,7 @@ jobs:
         run: |
           cd src-tauri/target/release/bundle/macos
           zip -ry macos.zip Luauncher.app ../../../../LICENSE
+          mv macos.zip ../../
 
       - name: Package Release Zip (Linux)
         if: matrix.os == 'ubuntu-latest'
