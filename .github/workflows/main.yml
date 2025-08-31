@@ -128,11 +128,12 @@ jobs:
       - name: Package Release Zip
         shell: bash
         run: |
-          cd src-tauri/target/release
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            cd src-tauri/target/release
             zip -j linux.zip launcher ../../../LICENSE
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            zip -j macos.zip launcher ../../../LICENSE
+            cd src-tauri/target/release/bundle/macos
+            zip -r macos.zip Luauncher.app ../../../../LICENSE
           fi
 
       - name: Package Release Zip (Windows)
