@@ -1,6 +1,6 @@
 [package]
 name = "luauncher"
-version = "1.1.0"
+version = "1.1.1"
 description = "A Lua Launcher"
 authors = ["GlowyGhost"]
 edition = "2021"
@@ -34,6 +34,7 @@ rfd = "0.15.4"
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 open = "5"
+once_cell = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows-icons = "0.2.1"
