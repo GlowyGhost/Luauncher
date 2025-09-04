@@ -12,7 +12,7 @@ import 'screens/output_screen.dart';
 external dynamic _invoke(String cmd, [dynamic args]);
 
 Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
-  if (settings.isDevMode) {
+  if (settings.isDevMode && cmd != "get_logs") {
     logger.add("[tauri_invoke.dart] Invoking command $cmd");
   }
   
@@ -22,7 +22,20 @@ Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
     final result = await promiseToFuture(promise);
 
     if (result is List) {
-      return List<String>.from(result.map((e) => e.toString()));
+      if (cmd == "get_logs") {
+        return result.map((e) {
+          if (e is String) return e;
+          if (hasProperty(e, 'message') && hasProperty(e, 'level')) {
+            return {
+              'message': getProperty(e, 'message'),
+              'level': getProperty(e, 'level'),
+            };
+          }
+          return e.toString();
+        }).toList();
+      } else if (cmd == "get_games") {
+        return List<String>.from(result.map((e) => e.toString()));
+      }
     } else if (result is String) {
       return result;
     } else if (result == null) {
