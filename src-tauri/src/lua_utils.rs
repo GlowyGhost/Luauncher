@@ -11,6 +11,7 @@ use winapi::um::winuser::FindWindowA;
 use std::{ffi::CString, ptr::null_mut};
 
 use crate::files::{self, get_scripts_dir};
+use crate::output;
 
 fn get_custom_lua() -> Lua {
     let lua = Lua::new();
@@ -52,9 +53,26 @@ fn get_custom_lua() -> Lua {
         Ok(())
     }).unwrap());
 
+    let _ = globals.set("log", lua.create_function(|_, (msg, level): (String, String)| {
+        let true_lvl = match level.as_str() {
+            "Info" => output::LogLevel::Info,
+            "Warning" => output::LogLevel::Warning,
+            "Error" => output::LogLevel::Error,
+            _ => output::LogLevel::Info
+        };
+
+        output::add_log(format!("[Lua script] {}", msg), true_lvl);
+        Ok(())
+    }).unwrap());
+
     let _ = globals.set("system", lua.create_string(system()).unwrap_or(
         lua.create_string("Unknown".to_owned()).unwrap()
     ));
+
+    let _ = globals.set("Info", lua.create_string("Info").unwrap());
+    let _ = globals.set("Warning", lua.create_string("Warning").unwrap());
+    let _ = globals.set("Error", lua.create_string("Error").unwrap());
+
     lua
 }
 
