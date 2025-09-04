@@ -11,6 +11,20 @@ class OutputScreen extends StatefulWidget {
 }
 
 class _OutputScreenState extends State<OutputScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _startLogPolling();
+  }
+
+  void _startLogPolling() {
+    Future.doWhile(() async {
+      await logger.getRustLogs();
+      await Future.delayed(const Duration(seconds: 1));
+      return mounted;
+    });
+  }
+
 	void showBar(String text) {
 		ScaffoldMessenger.of(context).showSnackBar(
 			SnackBar(content: Text(text)),
@@ -18,8 +32,8 @@ class _OutputScreenState extends State<OutputScreen> {
 	}
 
 	Future<void> save() async {
-		List<String> logs = logger._logs;
-		String log = logs.join("\n");
+		List<LogEntry> logs = logger._logs;
+		String log = logs.map((e) => "[${e.level}] ${e.message}").join("\n");
 
 		String res = await tauriInvoke('save_log', {"log": log});
 
@@ -68,7 +82,14 @@ class _OutputScreenState extends State<OutputScreen> {
                   itemCount: logger.logs.length,
                   itemBuilder: (context, index) {
                     final log = logger.logs[index];
-                    return Text(log, style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black));
+
+                    final color = switch (log.level) {
+                      LogLevel.Info => settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black,
+                      LogLevel.Warning => Colors.orange,
+                      LogLevel.Error => Colors.red,
+                    };
+
+                    return Text(log.message, style: TextStyle(fontSize: 18, color: color));
                   },
                 );
               },
@@ -80,15 +101,36 @@ class _OutputScreenState extends State<OutputScreen> {
   }
 }
 
+enum LogLevel { Info, Warning, Error }
+
+class LogEntry {
+  final String message;
+  final LogLevel level;
+
+  LogEntry(this.message, this.level);
+}
+
 class Logger extends ChangeNotifier {
-    final List<String> _logs = [];
+    final List<LogEntry> _logs = [];
     final bool devMode = false;
 
-    List<String> get logs => List.unmodifiable(_logs);
+    List<LogEntry> get logs => List.unmodifiable(_logs);
 
-    void add(String message) {
-        _logs.add(message);
-        notifyListeners();
+    void add(String message, {LogLevel level = LogLevel.Info}) {
+      _logs.add(LogEntry(message, level));
+      notifyListeners();
+    }
+
+    Future<void> getRustLogs() async {
+      final res = await tauriInvoke('get_logs');
+
+      if (res is List) {
+        for (var log in res) {
+          if (log is Map<String, dynamic>) {
+            add("${log['message']}", level: log['level']);
+          }
+        }
+      }
     }
 
     void clear() {
