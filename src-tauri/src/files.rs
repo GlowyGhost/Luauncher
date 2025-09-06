@@ -5,6 +5,8 @@ use serde::{Serialize, Deserialize};
 use std::{env, fs, io::Write, process::Command};
 use uuid::Uuid;
 
+use crate::output;
+
 #[cfg(target_os = "windows")]
 const EMBEDDED_BIN: &[u8] = include_bytes!("../updater/target/release/updater.exe");
 
@@ -71,10 +73,10 @@ pub(crate) fn save_script(name: &str, content: &str) -> std::io::Result<()> {
 }
 
 pub(crate) fn list_scripts() -> std::io::Result<Vec<String>> {
-    if let Some(plugins_dir) = get_scripts_dir() {
+    if let Some(dir) = get_scripts_dir() {
         let mut names = Vec::new();
 
-        for entry in fs::read_dir(plugins_dir)? {
+        for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
 
@@ -99,7 +101,7 @@ pub(crate) fn make_dirs() {
     let app_dir = get_app_base();
 
     if app_dir.is_none() {
-        eprintln!("Failed to get app base directory.");
+        output::add_log("[Getting App Settings Directory] Failed to get app base directory.".to_owned(), output::LogLevel::Error, false);
         return;
     }
 
@@ -109,7 +111,7 @@ pub(crate) fn make_dirs() {
     let scripts_dir = app_dir.join("scripts");
 
     if let Err(e) = fs::create_dir_all(&scripts_dir) {
-        eprintln!("Failed to create scripts directory: {e}");
+        output::add_log(format!("[Creating Scripts Directory] Failed to create scripts directory: {e}"), output::LogLevel::Error, false);
     }
 
     if !settings_path.exists() {
@@ -121,7 +123,7 @@ pub(crate) fn make_dirs() {
         }"#;
 
         if let Err(e) = fs::write(&settings_path, default_settings) {
-            eprintln!("Failed to write default settings: {e}");
+            output::add_log(format!("[Writing Default Settings] Failed to write default settings: {e}"), output::LogLevel::Error, false);
         }
     }
 }
