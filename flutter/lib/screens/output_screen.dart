@@ -84,9 +84,9 @@ class _OutputScreenState extends State<OutputScreen> {
                     final log = logger.logs[index];
 
                     final color = switch (log.level) {
-                      LogLevel.Info => settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black,
-                      LogLevel.Warning => Colors.orange,
-                      LogLevel.Error => Colors.red,
+                        LogLevel.Info => settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black,
+                        LogLevel.Warning => settings.oldDarkMode ? Color(0xFFFF9830) : Color(0xFFD96D00),
+                        LogLevel.Error => settings.oldDarkMode ? Color(0xFFFF2626) : Color(0xFFE00000),
                     };
 
                     return Text(log.message, style: TextStyle(fontSize: 18, color: color));
@@ -127,7 +127,18 @@ class Logger extends ChangeNotifier {
       if (res is List) {
         for (var log in res) {
           if (log is Map<String, dynamic>) {
-            add("${log['message']}", level: log['level']);
+            if (log['dev_mode'] == true && !settings.isDevMode) {
+              continue;
+            }
+
+            LogLevel level = switch (log['level'].toString()) {
+              'Info' => LogLevel.Info,
+              'Warning' => LogLevel.Warning,
+              'Error' => LogLevel.Error,
+              _ => LogLevel.Info,
+            };
+
+            add("${log['message']}", level: level);
           }
         }
       }
