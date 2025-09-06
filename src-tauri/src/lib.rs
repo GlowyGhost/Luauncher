@@ -63,7 +63,13 @@ fn get_game_path(gameName: &str) -> Result<String, String> {
         .find(|(k, _)| k.trim().eq_ignore_ascii_case(trimmed_name))
         .map(|(_, v)| v.clone());
 
-    found.ok_or_else(|| format!("Game '{}' not found in settings", gameName))
+    match found {
+        Some(path) => Ok(path),
+        None => {
+            output::add_log(format!("[Getting Game Path] Game '{}' not found in settings", gameName), output::LogLevel::Error, false);
+            Err(format!("Game '{}' not found in settings", gameName))
+        },
+    }
 }
 
 #[tauri::command]
@@ -148,6 +154,7 @@ fn hide_app(app: tauri::AppHandle) -> Result<(), String> {
         window.hide().map_err(|e| e.to_string())?;
         Ok(())
     } else {
+        output::add_log("[Hiding App] Failed to hide window.".to_owned(), output::LogLevel::Warning, false);
         Err("Window 'Luauncher' not found".to_owned())
     }
 }
@@ -171,6 +178,7 @@ fn save_log(log: String) -> Result<String, String> {
             }
 
             Err(e) => {
+                output::add_log(format!("[Saving Log] Failed to save log file: {e}"), output::LogLevel::Warning, false);
                 return Err(e.to_string())
             }
         }
@@ -247,6 +255,7 @@ async fn update() -> Result<String, String> {
 
 #[tauri::command]
 fn get_version() -> String {
+    output::add_log(format!("Version: {}", env!("CARGO_PKG_VERSION")), output::LogLevel::Info, true);
     env!("CARGO_PKG_VERSION").to_string()
 }
 
@@ -262,6 +271,7 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     match get_icon_base64_by_path(&exePath) {
         Ok(base64str) => Ok(Some(base64str)),
         Err(e) => {
+            output::add_log(format!("[Icon Extraction] Icon extraction failed: {e}"), output::LogLevel::Warning, false);
             eprintln!("Icon extraction failed: {}", e);
             Ok(None)
         }
@@ -276,11 +286,9 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    // Read the ICNS file
     let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
     let family = IconFamily::read(file).map_err(|e| e.to_string())?;
 
-    // Pick the largest available icon type (same approach as icns example)
     let &best_type = family
         .available_icons()
         .iter()
@@ -295,25 +303,21 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
     let height = image.height() as u32;
     let data = image.data();
 
-    // Convert icns::Image data -> RGBA u8 vector expected by image crate
     let rgba_bytes: Vec<u8> = match image.pixel_format() {
         PixelFormat::RGBA => {
-            // data is already R, G, B, A per docs
             data.to_vec()
         }
         PixelFormat::RGB => {
-            // expand R,G,B -> R,G,B,255
             let mut out = Vec::with_capacity((width * height * 4) as usize);
             for chunk in data.chunks_exact(3) {
-                out.push(chunk[0]); // R
-                out.push(chunk[1]); // G
-                out.push(chunk[2]); // B
-                out.push(255);      // A
+                out.push(chunk[0]);
+                out.push(chunk[1]);
+                out.push(chunk[2]);
+                out.push(255);
             }
             out
         }
         PixelFormat::GrayAlpha => {
-            // Gray,Alpha per-pixel (2 bytes) -> R=G=B=gray, A=alpha
             let mut out = Vec::with_capacity((width * height * 4) as usize);
             for chunk in data.chunks_exact(2) {
                 let gray = chunk[0];
@@ -326,7 +330,6 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
             out
         }
         PixelFormat::Gray => {
-            // Gray only -> R=G=B=gray, A=255
             let mut out = Vec::with_capacity((width * height * 4) as usize);
             for &g in data.iter() {
                 out.push(g);
@@ -337,12 +340,10 @@ fn get_icon(exePath: String) -> Result<Option<String>, String> {
             out
         }
         PixelFormat::Alpha => {
-            // alpha-only doesn't contain color info — can't produce sensible RGB
             return Err("ICNS image contains alpha mask only; unsupported".into());
         }
     };
 
-    // Build an ImageBuffer and write PNG to memory
     let img_buf: ImageBuffer<Rgba<u8>, _> =
         ImageBuffer::from_vec(width, height, rgba_bytes).ok_or("image buffer size mismatch")?;
     let dyn_img = DynamicImage::ImageRgba8(img_buf);
@@ -387,6 +388,7 @@ async fn main() {
                     window.show().unwrap();
                 }
             } else {
+                output::add_log("[App Initialization] No window labeled 'Luauncher' found.".to_owned(), output::LogLevel::Warning, false);
                 println!("No window labeled 'Luauncher' found.");
             }
 
