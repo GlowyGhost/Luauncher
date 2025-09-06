@@ -25,7 +25,7 @@ Luauncher has lua built in via [mlua](https://github.com/mlua-rs/mlua). There ar
 sleep() --Sleeps for the duration in milliseconds.
 openApp() --Opens the app name sent in by the function.
 closeApp() --Closes the app name sent in by the function.
-forceCloseApp() --Forces the app name sent in by the function.
+forceCloseApp() --Closes the app name sent in by the function.
 isAppOpen() --Returns a bool if the app name sent in is open.
 isWindowOpen() --Returns a bool if the window name is open.
 openURL() --Opens the URL.
@@ -36,10 +36,14 @@ waitUntilAppOpen() --Waits for the amount of time and when the app is opens, it 
 exit() --Exits the lua script. You can exit with an error code.
 runCommand() --Runs a command on the users terminal. The user must have dev mode on.
 messageBox() --Makes a message box pop up with title and desc.
+log() --Logs anything to the output. You can send a log level (Info, Warning, Error) with it. Also you can make it only display for people with dev mode on.
 ```
 
 There's also some variables.
 
 ```lua
 system --String thats says the users system (Windows, Linux, MacOS)
+Info --String that says "Info", meant for use with log()
+Warning --String that says "Warning", meant for use with log()
+Error --String that says "Error", meant for use with log()
 ```
