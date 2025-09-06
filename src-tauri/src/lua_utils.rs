@@ -53,7 +53,7 @@ fn get_custom_lua() -> Lua {
         Ok(())
     }).unwrap());
 
-    let _ = globals.set("log", lua.create_function(|_, (msg, level): (String, String)| {
+    let _ = globals.set("log", lua.create_function(|_, (msg, level, dev_mode): (String, String, bool)| {
         let true_lvl = match level.as_str() {
             "Info" => output::LogLevel::Info,
             "Warning" => output::LogLevel::Warning,
@@ -61,7 +61,13 @@ fn get_custom_lua() -> Lua {
             _ => output::LogLevel::Info
         };
 
-        output::add_log(format!("[Lua script] {}", msg), true_lvl);
+        let dev = match dev_mode {
+            true => true,
+            false => false,
+            _ => false
+        };
+
+        output::add_log(format!("[Lua script] {}", msg), true_lvl, dev);
         Ok(())
     }).unwrap());
 
