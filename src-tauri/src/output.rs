@@ -13,6 +13,7 @@ pub(crate) enum LogLevel {
 pub(crate) struct LogEntry {
     message: String,
     level: LogLevel,
+    dev_mode: bool,
 }
 
 static LOGS: Lazy<Mutex<Vec<LogEntry>>> = Lazy::new(|| Mutex::new(Vec::new()));
@@ -25,6 +26,6 @@ pub(crate) fn get_logs() -> Vec<LogEntry> {
     held_logs
 }
 
-pub(crate) fn add_log(log: String, level: LogLevel) {
-    LOGS.lock().unwrap().push(LogEntry { message: log, level });
+pub(crate) fn add_log(log: String, level: LogLevel, dev_mode: bool) {
+    LOGS.lock().unwrap().push(LogEntry { message: log, level, dev_mode });
 }
