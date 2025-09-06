@@ -29,6 +29,7 @@ Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
             return {
               'message': getProperty(e, 'message'),
               'level': getProperty(e, 'level'),
+              'dev_mode': getProperty(e, 'dev_mode')
             };
           }
           return e.toString();
