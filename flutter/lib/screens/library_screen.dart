@@ -55,7 +55,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 		for (final name in gameNames) {
 			try {
 				final exePath = await tauriInvoke("get_game_path", {"gameName": name});
-				final base64Icon = await tauriInvoke("get_icon", {"exePath": exePath});
+				final base64Icon = await tauriInvoke("get_icon", {"exePath": exePath, "name": name});
 
 				if (base64Icon == "" || base64Icon == null || base64Icon.isEmpty) {
 					loadedGames.add(GameInfo(name, null));
@@ -259,7 +259,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
 														} else if (value == 'delete') {
 															await tauriInvoke("delete_game", {"name": game.name});
 															_loadGames();
-														}
+														} else if (value == 'create') {
+                              String res = await tauriInvoke("create_shortcut", {"name": game.name});
+
+                              if (res == "Linux") {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Shortcut creation is only supported on Windows and macOS.")),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Shortcut created at: $res")),
+                                );
+                              }
+                            }
 													}, 
 													itemBuilder: (context) => [
 														PopupMenuItem(
@@ -269,6 +281,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 														PopupMenuItem(
 															value: 'delete',
 															child: Text('Delete'),
+														),
+                            PopupMenuItem(
+															value: 'create',
+															child: Text('Create Shortcut'),
 														),
 													],
 												),
