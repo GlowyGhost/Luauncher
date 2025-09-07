@@ -113,6 +113,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 										setState(() => settings.closeAfterOpen = value);
 									},
 								),
+
+                const SizedBox(height: 20),
+
+								SwitchListTile(
+									title: Text("Update Icons Every Reload", style: TextStyle(fontSize: 18, color: settings.oldDarkMode ? Color(0xFFFFFFFF) : Colors.black)),
+									value: settings.updateIcons,
+									onChanged: (value) {
+										setState(() => settings.updateIcons = value);
+									},
+								),
 							],
 						),
 
@@ -147,6 +157,7 @@ class Settings extends ChangeNotifier {
 	bool isDarkMode = true;
 	bool isDevMode = false;
 	bool closeAfterOpen = true;
+  bool updateIcons = false;
   String version = "Unknown";
 	Map<String, String> gamePaths = {};
 
@@ -161,6 +172,8 @@ class Settings extends ChangeNotifier {
 
 		oldDarkMode = settings["dark"];
 
+    updateIcons = settings["iconupdates"];
+
     getVersion();
 	}
 
@@ -170,7 +183,7 @@ class Settings extends ChangeNotifier {
   }
 
 	Future<String> saveSettings() async {
-		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen, "games": gamePaths});
+		String res = await tauriInvoke('save_settings', {"dark": isDarkMode, "dev": isDevMode, "close": closeAfterOpen, "games": gamePaths, "iconupdates": updateIcons});
 
         if (oldDarkMode != isDarkMode) {
             if (settings.isDevMode) {
@@ -185,3 +198,4 @@ class Settings extends ChangeNotifier {
 }
 
 final settings = Settings();
+
