@@ -5,21 +5,18 @@ use std::{collections::HashMap, net::TcpStream, time::Duration};
 use serde::Deserialize;
 use tauri::Manager;
 use rfd::{FileDialog, MessageDialog, MessageDialogResult};
-
-#[cfg(target_os = "windows")]
-use windows_icons::get_icon_base64_by_path;
+use base64::{engine::general_purpose, Engine as _};
+use image::{DynamicImage, ImageOutputFormat};
+use std::io::Cursor;
 
 #[cfg(target_os = "macos")]
 use icns::{IconFamily, IconType, PixelFormat};
 
 #[cfg(target_os = "macos")]
-use image::{ImageBuffer, Rgba, DynamicImage, ImageOutputFormat};
+use image::{ImageBuffer, Rgba};
 
 #[cfg(target_os = "macos")]
-use std::{fs::File, io::BufReader, io::Cursor, path::Path};
-
-#[cfg(target_os = "macos")]
-use base64::encode as base64_encode;
+use std::{fs::File, io::BufReader, path::Path};
 
 mod lua_utils;
 mod files;
@@ -42,12 +39,13 @@ async fn run_game(gameName: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn save_settings(dark: bool, dev: bool, close: bool, games: HashMap<String, String>) -> String {
+fn save_settings(dark: bool, dev: bool, close: bool, games: HashMap<String, String>, iconupdates: bool) -> String {
     let _ = files::save_settings(&files::Settings{
         dark,
         dev,
         close,
-        games
+        games,
+        iconupdates
     });
 
     "Saved Settings".to_string()
@@ -114,7 +112,7 @@ fn save_game(mut path: String, name: String, oldn: String) -> Result<String, Str
     }
 
     games.remove(&oldn);
-    games.insert(name.clone(), path);
+    games.insert(name.clone(), path.clone());
 
     settings.games = games;
 
@@ -127,6 +125,26 @@ fn save_game(mut path: String, name: String, oldn: String) -> Result<String, Str
     let _ = files::save_script(&name, &content);
 
     let _ = files::save_settings(&settings);
+
+    #[cfg(target_os = "windows")]
+    {
+        let oldicon = format!("{}.ico", oldn);
+
+        let icons_dir = files::get_icon_dir().unwrap();
+
+        let _ = files::delete_file(icons_dir.join(&oldicon));
+        let _ = files::create_icon(&path, &name);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let oldicon = format!("{}.icns", oldn);
+
+        let icons_dir = files::get_icon_dir().unwrap();
+
+        let _ = files::delete_file(icons_dir.join(&oldicon));
+        let _ = files::create_icon(&path, &name);
+    }
 
     Ok("Saved Game".to_string())
 }
@@ -144,6 +162,12 @@ fn delete_game(name: String) -> Result<String, String> {
     settings.games = games;
 
     let _ = files::save_settings(&settings);
+
+    #[cfg(target_os = "windows")]
+    let _ = files::delete_file(files::get_icon_dir().unwrap().join(&format!("{}.ico", name)));
+
+    #[cfg(target_os = "macos")]
+    let _ = files::delete_file(files::get_icon_dir().unwrap().join(&format!("{}.icns", name)));
 
     Ok("Deleted Game".to_string())
 }
@@ -255,7 +279,6 @@ async fn update() -> Result<String, String> {
 
 #[tauri::command]
 fn get_version() -> String {
-    output::add_log(format!("Version: {}", env!("CARGO_PKG_VERSION")), output::LogLevel::Info, true);
     env!("CARGO_PKG_VERSION").to_string()
 }
 
@@ -264,101 +287,130 @@ fn open_link(url: String) -> Result<(), String> {
     open::that(url).map_err(|e| e.to_string())
 }
 
-#[cfg(target_os = "windows")]
 #[tauri::command]
-fn get_icon(exePath: String) -> Result<Option<String>, String> {
-    //      ^^^^^^^ Still camelCase...
-    match get_icon_base64_by_path(&exePath) {
-        Ok(base64str) => Ok(Some(base64str)),
-        Err(e) => {
-            output::add_log(format!("[Icon Extraction] Icon extraction failed: {e}"), output::LogLevel::Warning, false);
-            eprintln!("Icon extraction failed: {}", e);
-            Ok(None)
-        }
+fn create_shortcut(name: String) -> Result<String, String> {
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Err("Linux".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    let filename = format!("{}.lnk", name);
+    #[cfg(target_os = "macos")]
+    let filename = format!("{}.command", name);
+
+    if let Some(path) = FileDialog::new()
+        .set_file_name(&filename)
+        .save_file()
+    {
+        return files::create_shortcut(&path.to_string_lossy(), &name);
+    } else {
+        return Ok("Cancelled".to_string())
     }
 }
 
-#[cfg(target_os = "macos")]
 #[tauri::command]
-fn get_icon(exePath: String) -> Result<Option<String>, String> {
-    let icon_path = Path::new(&exePath).join("Contents/Resources/AppIcon.icns");
-    if !icon_path.exists() {
-        return Ok(None);
+fn get_icon(exePath: String, name: String) -> Result<Option<String>, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let icon_name = files::create_icon(&exePath, &name).map_err(|e| format!("Icon creation failed: {e}"))?;
+        let icon_path = files::get_icon(&icon_name)
+            .ok_or_else(|| "Icon path not found".to_string())?;
+
+        let icon_bytes = std::fs::read(&icon_path).map_err(|e| format!("Failed to read icon file: {e}"))?;
+        let icon_dir = ico::IconDir::read(std::io::Cursor::new(&icon_bytes))
+            .map_err(|e| format!("Failed to parse ico: {e}"))?;
+        let entry = icon_dir.entries().iter().max_by_key(|e| e.width()).ok_or("No icon entries found")?;
+        let icon_image = (*entry).decode().map_err(|e| format!("Failed to decode icon: {e}"))?;
+        let width = icon_image.width();
+        let height = icon_image.height();
+        let rgba = icon_image.rgba_data().to_vec();
+        let img_buf = image::ImageBuffer::<image::Rgba<u8>, _>::from_vec(width, height, rgba)
+            .ok_or("Failed to create ImageBuffer from icon data")?;
+        let dyn_img = DynamicImage::ImageRgba8(img_buf);
+
+        let mut png_data = Vec::new();
+        dyn_img.write_to(&mut Cursor::new(&mut png_data), ImageOutputFormat::Png)
+            .map_err(|e| format!("Failed to encode PNG: {e}"))?;
+
+        Ok(Some(general_purpose::STANDARD.encode(&png_data)))
     }
 
-    let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
-    let family = IconFamily::read(file).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    {
+        let icon_name = files::create_icon(&exePath, &name).map_err(|e| format!("Icon creation failed: {e}"))?;
+        let icon_path = files::get_icon(&icon_name)
+            .ok_or_else(|| "Icon path not found".to_string())?;
 
-    let &best_type = family
-        .available_icons()
-        .iter()
-        .max_by_key(|t| t.pixel_width() * t.pixel_height())
-        .ok_or("ICNS file contains no icons")?;
+        let file = BufReader::new(File::open(&icon_path).map_err(|e| e.to_string())?);
+        let family = IconFamily::read(file).map_err(|e| e.to_string())?;
 
-    let image = family
-        .get_icon_with_type(best_type)
-        .map_err(|e| e.to_string())?;
+        let &best_type = family
+            .available_icons()
+            .iter()
+            .max_by_key(|t| t.pixel_width() * t.pixel_height())
+            .ok_or("ICNS file contains no icons")?;
 
-    let width = image.width() as u32;
-    let height = image.height() as u32;
-    let data = image.data();
+        let image = family
+            .get_icon_with_type(best_type)
+            .map_err(|e| e.to_string())?;
 
-    let rgba_bytes: Vec<u8> = match image.pixel_format() {
-        PixelFormat::RGBA => {
-            data.to_vec()
-        }
-        PixelFormat::RGB => {
-            let mut out = Vec::with_capacity((width * height * 4) as usize);
-            for chunk in data.chunks_exact(3) {
-                out.push(chunk[0]);
-                out.push(chunk[1]);
-                out.push(chunk[2]);
-                out.push(255);
+        let width = image.width() as u32;
+        let height = image.height() as u32;
+        let data = image.data();
+
+        let rgba_bytes: Vec<u8> = match image.pixel_format() {
+            PixelFormat::RGBA => data.to_vec(),
+            PixelFormat::RGB => {
+                let mut out = Vec::with_capacity((width * height * 4) as usize);
+                for chunk in data.chunks_exact(3) {
+                    out.push(chunk[0]);
+                    out.push(chunk[1]);
+                    out.push(chunk[2]);
+                    out.push(255);
+                }
+                out
             }
-            out
-        }
-        PixelFormat::GrayAlpha => {
-            let mut out = Vec::with_capacity((width * height * 4) as usize);
-            for chunk in data.chunks_exact(2) {
-                let gray = chunk[0];
-                let alpha = chunk[1];
-                out.push(gray);
-                out.push(gray);
-                out.push(gray);
-                out.push(alpha);
+            PixelFormat::GrayAlpha => {
+                let mut out = Vec::with_capacity((width * height * 4) as usize);
+                for chunk in data.chunks_exact(2) {
+                    let gray = chunk[0];
+                    let alpha = chunk[1];
+                    out.push(gray);
+                    out.push(gray);
+                    out.push(gray);
+                    out.push(alpha);
+                }
+                out
             }
-            out
-        }
-        PixelFormat::Gray => {
-            let mut out = Vec::with_capacity((width * height * 4) as usize);
-            for &g in data.iter() {
-                out.push(g);
-                out.push(g);
-                out.push(g);
-                out.push(255);
+            PixelFormat::Gray => {
+                let mut out = Vec::with_capacity((width * height * 4) as usize);
+                for &g in data.iter() {
+                    out.push(g);
+                    out.push(g);
+                    out.push(g);
+                    out.push(255);
+                }
+                out
             }
-            out
-        }
-        PixelFormat::Alpha => {
-            return Err("ICNS image contains alpha mask only; unsupported".into());
-        }
-    };
+            PixelFormat::Alpha => {
+                return Err("ICNS image contains alpha mask only; unsupported".into());
+            }
+        };
 
-    let img_buf: ImageBuffer<Rgba<u8>, _> =
-        ImageBuffer::from_vec(width, height, rgba_bytes).ok_or("image buffer size mismatch")?;
-    let dyn_img = DynamicImage::ImageRgba8(img_buf);
+        let img_buf: ImageBuffer<Rgba<u8>, _> =
+            ImageBuffer::from_vec(width, height, rgba_bytes).ok_or("image buffer size mismatch")?;
+        let dyn_img = DynamicImage::ImageRgba8(img_buf);
 
-    let mut png_data = Vec::new();
-    dyn_img
-        .write_to(&mut Cursor::new(&mut png_data), ImageOutputFormat::Png)
-        .map_err(|e| e.to_string())?;
+        let mut png_data = Vec::new();
+        dyn_img
+            .write_to(&mut Cursor::new(&mut png_data), ImageOutputFormat::Png)
+            .map_err(|e| e.to_string())?;
 
-    Ok(Some(base64_encode(&png_data)))
-}
+        Ok(Some(general_purpose::STANDARD.encode(&png_data)))
+    }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-#[tauri::command]
-fn get_icon(_exePath: String) -> Result<Option<String>, String> {
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     Ok(None)
 }
 
@@ -395,7 +447,7 @@ async fn main() {
             Ok(())})
         .invoke_handler(tauri::generate_handler![get_games, run_game, save_settings, get_settings, restart_app, hide_app,
             get_icon, get_game_path, make_plugin, save_game, delete_game, save_log, uninstall, update, get_version, open_link,
-            get_logs])
+            get_logs, create_shortcut])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
