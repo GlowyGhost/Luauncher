@@ -46,13 +46,14 @@ Future<dynamic> tauriInvoke(String cmd, [Map<String, dynamic>? args]) async {
         'dark': getProperty(result, 'dark'),
         'dev': getProperty(result, 'dev'),
         'close': getProperty(result, 'close'),
-        'games': getProperty(result, 'games')
+        'games': getProperty(result, 'games'),
+        'iconupdates': getProperty(result, 'iconupdates')
       };
     }
 
     return result;
   } catch (e) {
-    logger.add("[Tauri Invoke Error] $e");
+    logger.add("[Tauri Invoke Error] $e", level: LogLevel.Error);
     rethrow;
   }
 }
