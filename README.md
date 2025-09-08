@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/128.png" width="128px" />
+
 # Luauncher
 
 Another Game Launcher I guess...
