@@ -294,18 +294,21 @@ fn create_shortcut(name: String) -> Result<String, String> {
         return Err("Linux".to_string());
     }
 
-    #[cfg(target_os = "windows")]
-    let filename = format!("{}.lnk", name);
-    #[cfg(target_os = "macos")]
-    let filename = format!("{}.command", name);
-
-    if let Some(path) = FileDialog::new()
-        .set_file_name(&filename)
-        .save_file()
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
     {
-        return files::create_shortcut(&path.to_string_lossy(), &name);
-    } else {
-        return Ok("Cancelled".to_string())
+        #[cfg(target_os = "windows")]
+        let filename = format!("{}.lnk", name);
+        #[cfg(target_os = "macos")]
+        let filename = format!("{}.command", name);
+
+        if let Some(path) = FileDialog::new()
+            .set_file_name(&filename)
+            .save_file()
+        {
+            return files::create_shortcut(&path.to_string_lossy(), &name);
+        } else {
+            return Ok("Cancelled".to_string())
+        }
     }
 }
 
