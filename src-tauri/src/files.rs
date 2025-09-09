@@ -15,6 +15,8 @@ use windows::{
         System::Com::{IPersistFile, CoInitializeEx, CoCreateInstance, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED},
     },
 };
+#[cfg(target_os = "macos")]
+use std::os::unix::fs::PermissionsExt;
 
 use crate::output;
 
@@ -244,7 +246,7 @@ pub(crate) fn create_icon(path: &str, name: &str) -> Result<String, String> {
 
         let icon_path = Path::new(&path).join("Contents/Resources/AppIcon.icns");
         if !icon_path.exists() {
-            return Ok(None);
+            return Ok("".to_string());
         }
 
         fs::copy(&icon_path, &new_path)
